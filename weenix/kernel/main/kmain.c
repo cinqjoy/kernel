@@ -264,9 +264,7 @@ initproc_create(void)
 static void *
 initproc_run(int arg1, void *arg2)
 {
-		testproc(0,NULL);
 		
-		/*
         kshell_add_command("testproc",testproc,"Ted Faber's tests");
         kshell_add_command("shtest",sunghan_test,"sunghan's tests");
         kshell_add_command("dltest",sunghan_deadlock_test,"sunghan's deadlock tests");
@@ -274,7 +272,6 @@ initproc_run(int arg1, void *arg2)
         if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
         while (kshell_execute_next(kshell));
         kshell_destroy(kshell);
-		*/
 		
         return NULL;
 }

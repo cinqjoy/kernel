@@ -93,6 +93,9 @@ proc_create(char *name)
 		
 		list_init(&myProc->p_threads);
 		list_init(&myProc->p_children);
+		list_init(&myProc->p_child_link);
+		list_init(&myProc->p_list_link);
+		
 		myProc->p_pproc = curproc;
 
 		myProc->p_status=0;
@@ -150,6 +153,7 @@ proc_cleanup(int status)
 	if(!list_empty(&curproc->p_children)){
 		list_iterate_begin(&curproc->p_children,myProc,proc_t,p_child_link){
 			myProc->p_pproc = proc_initproc;
+			list_remove(&myProc->p_child_link);
 			list_insert_tail(&proc_initproc->p_children, &myProc->p_child_link);	
 		}list_iterate_end();
 	}
@@ -278,6 +282,7 @@ do_waitpid(pid_t pid, int options, int *status)
         int is_inside=0;
 	pid_t myPid;
 	proc_t *myProc;
+	kthread_t *myThread;
 	KASSERT(options==0 && pid>=-1);
 	if(list_empty(&curproc->p_children)){
 		return -ECHILD;
@@ -297,6 +302,10 @@ do_waitpid(pid_t pid, int options, int *status)
 				if(myProc->p_state==PROC_DEAD){
 					*status = myProc->p_status;
 					myPid = myProc->p_pid;
+					list_iterate_begin(&myProc->p_threads,myThread,kthread_t,kt_plink){
+						kthread_destroy(myThread);
+					}list_iterate_end();
+					list_remove(&myProc->p_child_link);
 					slab_obj_free(proc_allocator,myProc);
 					return myPid;
 				}			
@@ -306,6 +315,10 @@ do_waitpid(pid_t pid, int options, int *status)
 			if(myProc->p_state==PROC_DEAD){
 				*status = myProc->p_status;
 				myPid = myProc->p_pid;
+				list_iterate_begin(&myProc->p_threads,myThread,kthread_t,kt_plink){
+					kthread_destroy(myThread);
+				}list_iterate_end();
+				list_remove(&myProc->p_child_link);
 				slab_obj_free(proc_allocator,myProc);
 				return myPid;
 			}
