@@ -157,7 +157,6 @@ proc_cleanup(int status)
 			list_insert_tail(&proc_initproc->p_children, &myProc->p_child_link);	
 		}list_iterate_end();
 	}
-
 	sched_wakeup_on(&curproc->p_pproc->p_wait);
 }
 
@@ -305,6 +304,7 @@ do_waitpid(pid_t pid, int options, int *status)
 					list_iterate_begin(&myProc->p_threads,myThread,kthread_t,kt_plink){
 						kthread_destroy(myThread);
 					}list_iterate_end();
+					list_remove(&myProc->p_list_link);
 					list_remove(&myProc->p_child_link);
 					slab_obj_free(proc_allocator,myProc);
 					return myPid;
@@ -318,6 +318,7 @@ do_waitpid(pid_t pid, int options, int *status)
 				list_iterate_begin(&myProc->p_threads,myThread,kthread_t,kt_plink){
 					kthread_destroy(myThread);
 				}list_iterate_end();
+				list_remove(&myProc->p_list_link);
 				list_remove(&myProc->p_child_link);
 				slab_obj_free(proc_allocator,myProc);
 				return myPid;

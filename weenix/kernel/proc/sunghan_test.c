@@ -54,10 +54,10 @@ add_my_node(int arg1, void *arg2) {
 	int rand_number, i=0;	
 
 	while (counter > 0) {
-		check_sleep("add");
+		check_sleep("add out mutex");
 		kmutex_lock(&mynode.my_mutex);
 
-		check_sleep("add");
+		check_sleep("add in mutex");
 
 		if (mynode.length < 5) {
 			mynode.length++;
@@ -79,11 +79,11 @@ remove_my_node(int arg1, void *arg2) {
 	int rand_number, i=0;	
 
 	while (counter > 0) {
-		check_sleep("remove");
+		check_sleep("remove out mutex");
 
 		kmutex_lock(&mynode.my_mutex);
 
-		check_sleep("remove");
+		check_sleep("remove in mutex");
 		
 		if (mynode.length > 0) {
 			mynode.length--;
