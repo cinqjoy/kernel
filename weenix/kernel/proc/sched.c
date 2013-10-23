@@ -122,7 +122,6 @@ sched_cancellable_sleep_on(ktqueue_t *q)
 		if(curthr->kt_cancelled){
 				dbg(DBG_SCHED, "trap: CANCELLING: thread %p of proc %d "
                     "(0x%p)\n", curthr, curproc->p_pid, curproc);
-				kthread_exit(curthr->kt_retval);
 				return -EINTR;
 		}
 
@@ -133,7 +132,6 @@ sched_cancellable_sleep_on(ktqueue_t *q)
 		if(curthr->kt_cancelled){
 				dbg(DBG_SCHED, "trap: CANCELLING: thread %p of proc %d "
                     "(0x%p)\n", curthr, curproc->p_pid, curproc);
-				kthread_exit(curthr->kt_retval);
 				return -EINTR;
 		}
 
@@ -229,6 +227,7 @@ sched_switch(void)
 		intr_setipl(IPL_HIGH);
 		
 		while(sched_queue_empty(&kt_runq)){
+			dbg(DBG_SCHED, "All of threads are in the wait queues\n");
 			intr_setipl(IPL_LOW);
 			intr_wait();
 			intr_setipl(IPL_HIGH);

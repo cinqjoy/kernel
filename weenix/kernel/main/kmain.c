@@ -265,9 +265,9 @@ static void *
 initproc_run(int arg1, void *arg2)
 {
 		
-        kshell_add_command("testproc",testproc,"Ted Faber's tests");
-        kshell_add_command("shtest",sunghan_test,"sunghan's tests");
-        kshell_add_command("dltest",sunghan_deadlock_test,"sunghan's deadlock tests");
+        kshell_add_command("testproc",(kshell_cmd_func_t)testproc,"Ted Faber's tests");
+        kshell_add_command("shtest",(kshell_cmd_func_t)sunghan_test,"sunghan's tests");
+        kshell_add_command("dltest",(kshell_cmd_func_t)sunghan_deadlock_test,"sunghan's deadlock tests");
         kshell_t *kshell = kshell_create(0);
         if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
         while (kshell_execute_next(kshell));

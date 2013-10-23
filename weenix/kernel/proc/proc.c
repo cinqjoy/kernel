@@ -86,10 +86,14 @@ proc_create(char *name)
 		int i;
 		myProc = (proc_t*)slab_obj_alloc(proc_allocator);
 		myProc->p_pid = _proc_getid();
+		/* pid can only be PID_IDLE if this is the first process */
+		KASSERT(PID_IDLE != myProc->p_pid || list_empty(&_proc_list)); 
+		/* pid can only be PID_INIT when creating from idle process */
+		KASSERT(PID_INIT != myProc->p_pid || PID_IDLE == curproc->p_pid);
 		if(myProc->p_pid == PID_INIT){
 			proc_initproc = myProc;	
 		}
-		strcpy(myProc->p_comm,name);  
+		strcpy(myProc->p_comm,name);
 		
 		list_init(&myProc->p_threads);
 		list_init(&myProc->p_children);
@@ -107,7 +111,12 @@ proc_create(char *name)
 
 		list_insert_tail(&_proc_list,&myProc->p_list_link);
 		if(curproc!=NULL){
+			dbg(DBG_PROC,"The proc \"%s\" %d (0x%p) had been created by the proc \"%s\" %d (0x%p)\n"
+						,myProc->p_comm, myProc->p_pid, myProc, curproc->p_comm, curproc->p_pid, curproc);
 			list_insert_tail(&curproc->p_children,&myProc->p_child_link);	
+		}else{
+			dbg(DBG_PROC,"The proc \"%s\" %d (0x%p) had been created\n"
+						,myProc->p_comm, myProc->p_pid, myProc);
 		}
 		
 		for(i=0;i<NFILES;i++)
@@ -147,17 +156,29 @@ proc_create(char *name)
 void
 proc_cleanup(int status)
 {
+	KASSERT(NULL != proc_initproc); /* should have an "init" process */
+	KASSERT(1 <= curproc->p_pid); /* this process should not be idle process */
+	KASSERT(NULL != curproc->p_pproc); /* this process should have parent process */
+	
 	proc_t *myProc;
 	curproc->p_state=PROC_DEAD;
 	curproc->p_status=status;
+	dbg(DBG_PROC,"The proc \"%s\" %d (0x%p) is dead!\n",
+				curproc->p_comm, curproc->p_pid, curproc);
+
 	if(!list_empty(&curproc->p_children)){
 		list_iterate_begin(&curproc->p_children,myProc,proc_t,p_child_link){
+			dbg(DBG_PROC,"The child proc \"%s\" %d (0x%p), had been assigned to the proc \"%s\" %d (0x%p).\n"
+						,myProc->p_comm, myProc->p_pid, myProc, proc_initproc->p_comm, proc_initproc->p_pid, proc_initproc);
 			myProc->p_pproc = proc_initproc;
 			list_remove(&myProc->p_child_link);
 			list_insert_tail(&proc_initproc->p_children, &myProc->p_child_link);	
 		}list_iterate_end();
 	}
 	sched_wakeup_on(&curproc->p_pproc->p_wait);
+	
+	
+	KASSERT(NULL != curproc->p_pproc); /* this process should have parent process */
 }
 
 /*
@@ -175,14 +196,10 @@ proc_kill(proc_t *p, int status)
 
 		KASSERT(p != NULL);
 
-		if (p == curproc)
-		{
+		if (p == curproc){
 			do_exit(status);
-		}
-		else
-		{
-        	list_iterate_begin(&p->p_threads, kthr, kthread_t, kt_plink) 
-			{
+		}else{
+        	list_iterate_begin(&p->p_threads, kthr, kthread_t, kt_plink) {
 					KASSERT(kthr != NULL);
 			   		kthread_cancel(kthr, NULL);
        	 	} list_iterate_end();
@@ -200,13 +217,13 @@ void
 proc_kill_all()
 {
 	proc_t *myProc;
-	list_iterate_begin(&_proc_list,myProc,proc_t,p_child_link){
-	        if(myProc->p_pid!=PID_IDLE && myProc->p_pid!=PID_INIT && myProc->p_pid!=curproc->p_pid){
+	list_iterate_begin(&_proc_list,myProc,proc_t,p_list_link){
+	        if(myProc->p_pid!=PID_IDLE && myProc->p_pid!=PID_INIT && myProc->p_pid!=curproc->p_pid && myProc->p_pproc->p_pid != PID_IDLE){
 			proc_kill(myProc,0);
 		}
 	}list_iterate_end();
-	if(curproc->p_pid!=PID_IDLE && curproc->p_pid!=PID_INIT)
-		do_exit(0);
+	if(curproc->p_pid!=PID_IDLE && curproc->p_pid!=PID_INIT && curproc->p_pproc->p_pid != PID_IDLE)
+		proc_kill(curproc,0);
 }
 
 proc_t *
@@ -238,26 +255,23 @@ proc_list()
 void
 proc_thread_exited(void *retval)
 {
-		proc_t * exited_thread_proc;
         int count = 0;
         kthread_t *kthr;
 
 		KASSERT(curproc != NULL);
-		exited_thread_proc = curproc;
-		KASSERT(curthr != NULL);
 
 #ifdef  _MTP__					   		
-        list_iterate_begin(&exited_thread_proc->p_threads, kthr, kthread_t, kt_plink) {
+        list_iterate_begin(&curproc->p_threads, kthr, kthread_t, kt_plink) {
                 ++count;
         } list_iterate_end(); 
 #else
 				count =1;
 #endif
 
-
-		KASSERT(count != 0);
-		if (count == 1)
-			proc_cleanup(exited_thread_proc->p_status);
+		KASSERT(count != 0 && "the curproc->p_threads should not be empty.");
+		if (count == 1){
+			proc_cleanup(curproc->p_status);
+		}
 }
 
 /* If pid is -1 dispose of one of the exited children of the current
@@ -302,10 +316,14 @@ do_waitpid(pid_t pid, int options, int *status)
 					*status = myProc->p_status;
 					myPid = myProc->p_pid;
 					list_iterate_begin(&myProc->p_threads,myThread,kthread_t,kt_plink){
+						/* thr points to a thread to be destroied */
+						KASSERT(KT_EXITED == myThread->kt_state);
 						kthread_destroy(myThread);
 					}list_iterate_end();
 					list_remove(&myProc->p_list_link);
 					list_remove(&myProc->p_child_link);
+					KASSERT(NULL != myProc->p_pagedir); /* this process should have pagedir */
+					pt_destroy_pagedir(myProc->p_pagedir);
 					slab_obj_free(proc_allocator,myProc);
 					return myPid;
 				}			
@@ -316,10 +334,14 @@ do_waitpid(pid_t pid, int options, int *status)
 				*status = myProc->p_status;
 				myPid = myProc->p_pid;
 				list_iterate_begin(&myProc->p_threads,myThread,kthread_t,kt_plink){
+					/* thr points to a thread to be destroied */
+					KASSERT(KT_EXITED == myThread->kt_state);
 					kthread_destroy(myThread);
 				}list_iterate_end();
 				list_remove(&myProc->p_list_link);
 				list_remove(&myProc->p_child_link);
+				KASSERT(NULL != myProc->p_pagedir); /* this process should have pagedir */
+				pt_destroy_pagedir(myProc->p_pagedir);
 				slab_obj_free(proc_allocator,myProc);
 				return myPid;
 			}

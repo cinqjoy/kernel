@@ -42,7 +42,7 @@
 # Set which CS402 tests are to run.  Valid from 0 (no tests except running init)
 # to 10 ( run all tests plus student tests).  Our class does not use this at all.
 # Please ignore.
-	CS402TESTS=1
+	CS402TESTS=10
 
 #
 # Set the number of terminals that we should be launching.
