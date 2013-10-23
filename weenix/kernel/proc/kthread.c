@@ -195,71 +195,16 @@ kthread_cancel(kthread_t *kthr, void *retval)
 void
 kthread_exit(void *retval)
 {
-	       
-		//kthread_t * old_cur_kthread;
-		/* MC check current thread is not null
-		 since current thread is about to exit */
-		//old_cur_kthread = curthr;
-		/*  ? not sure if need to check */
-        /*KASSERT(old_cur_kthread!=NULL);*/
 
-		/* switch current state while getting mutex lock inside */
-		/* 10/20 should be called in proc_thread_exited(); */
-		/*sched_switch();*/
-	
+        KASSERT(curthr!=NULL);
+		dbg(DBG_THR,"The ");
+		proc_thread_exited(retval);
+		dbg(DBG_THR,"thread (0x%p) exited.\n",curthr);
 
 		curthr->kt_state = KT_EXITED;
-		/* return value to process
-		 default is success*/
-
 		curthr->kt_retval = retval;
 
-		/* MC
-		alert proc_thread_exited 
-		 defined in proc.c
-		 ?? */
-
-		/*MC
-		 back to initial state in some variable
-		old_cur_thread->kt_errno = 0; // changed by system call, 
-		10/20 i think changed in process for totoal clean */
-		/*old_cur_kthread->kt_proc = p;
-		old_cur_kthread->kt_cancelled = 1;*/
-
-		/*10/20 ? schedule do or I do */
-		/*old_cur_kthread->kt_wchan = NULL;*/ /* wait for schedule */
-		/*old_cur_thread->qlink = NULL; */ /* assgined by schedule to proper queue */
-
-		/*old_cur_kthread->plink = NULL;*/
-
-		/*10/21 ?
-		 no need to change
-		old_cur_thread->kt_detached = 0;
-		10/21
-		old_cur_thread->kt_joinq = NULL; // changed while asking a mutex */
-
-		/* MC
-		alert proc_thread_exited 
-		 defined in proc.c */
-		KASSERT(!curthr->kt_wchan);
-		KASSERT(!curthr->kt_qlink.l_next && !curthr->kt_qlink.l_prev)
-		proc_thread_exited(curthr->kt_retval);
-		
-
-		/*MC
-		 ? destroy
-		 but ID and return value should be kept for join
- 		 ID  may not need 
-		 return value is passed by argument
-		 10/20 ? in process or in thread*/
-		/*kthread_destroy(old_cur_kthread);*/
-
-		/* switch current state while getting mutex lock inside */
-		/* 10/20 should be called in proc_thread_exited(); */
 		sched_switch();
-
-
-        /*NOT_YET_IMPLEMENTED("PROCS: kthread_exit"); */
 }
 
 /*

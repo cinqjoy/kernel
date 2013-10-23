@@ -195,7 +195,6 @@ proc_kill(proc_t *p, int status)
         kthread_t *kthr;
 
 		KASSERT(p != NULL);
-
 		if (p == curproc){
 			do_exit(status);
 		}else{
@@ -216,6 +215,7 @@ proc_kill(proc_t *p, int status)
 void
 proc_kill_all()
 {
+	dbg(DBG_PROC,"All processes are going to be killed except the child processes of IDLE process.\n");
 	proc_t *myProc;
 	list_iterate_begin(&_proc_list,myProc,proc_t,p_list_link){
 	        if(myProc->p_pid!=PID_IDLE && myProc->p_pid!=PID_INIT && myProc->p_pid!=curproc->p_pid && myProc->p_pproc->p_pid != PID_IDLE){
@@ -256,20 +256,17 @@ void
 proc_thread_exited(void *retval)
 {
         int count = 0;
-        kthread_t *kthr;
-
 		KASSERT(curproc != NULL);
 
-#ifdef  _MTP__					   		
+        kthread_t *kthr;
         list_iterate_begin(&curproc->p_threads, kthr, kthread_t, kt_plink) {
-                ++count;
+				if(kthr->kt_state != KT_EXITED)
+					count++;
         } list_iterate_end(); 
-#else
-				count =1;
-#endif
 
-		KASSERT(count != 0 && "the curproc->p_threads should not be empty.");
+		KASSERT(count != 0 && "All threads of curproc are dead!\n");
 		if (count == 1){
+			dbg(DBG_THR,"last ");
 			proc_cleanup(curproc->p_status);
 		}
 }
