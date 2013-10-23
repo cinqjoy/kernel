@@ -195,23 +195,24 @@ kthread_cancel(kthread_t *kthr, void *retval)
 void
 kthread_exit(void *retval)
 {
-		kthread_t * old_cur_kthread;
+	       
+		//kthread_t * old_cur_kthread;
 		/* MC check current thread is not null
 		 since current thread is about to exit */
-		old_cur_kthread = curthr;
+		//old_cur_kthread = curthr;
 		/*  ? not sure if need to check */
-        KASSERT(old_cur_kthread!=NULL);
+        /*KASSERT(old_cur_kthread!=NULL);*/
 
 		/* switch current state while getting mutex lock inside */
 		/* 10/20 should be called in proc_thread_exited(); */
 		/*sched_switch();*/
 	
 
-		old_cur_kthread->kt_state = KT_EXITED;
+		curthr->kt_state = KT_EXITED;
 		/* return value to process
 		 default is success*/
 
-		old_cur_kthread->kt_retval = retval;
+		curthr->kt_retval = retval;
 
 		/* MC
 		alert proc_thread_exited 
@@ -240,7 +241,9 @@ kthread_exit(void *retval)
 		/* MC
 		alert proc_thread_exited 
 		 defined in proc.c */
-		proc_thread_exited(old_cur_kthread->kt_retval);
+		KASSERT(!curthr->kt_wchan);
+		KASSERT(!curthr->kt_qlink.l_next && !curthr->kt_qlink.l_prev)
+		proc_thread_exited(curthr->kt_retval);
 		
 
 		/*MC
