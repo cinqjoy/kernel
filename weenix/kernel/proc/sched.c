@@ -235,6 +235,8 @@ sched_switch(void)
 		
 		oldthr = curthr;
 		curthr = ktqueue_dequeue(&kt_runq);
+		dbg(DBG_SCHED, "Switch from thread (0x%p) of \"%s\" proc to thread (0x%p) of \"%s\" proc.\n",
+						oldthr, oldthr->kt_proc->p_comm, curthr, curthr->kt_proc->p_comm);
 		curproc = curthr->kt_proc;
 		context_switch(&oldthr->kt_ctx, &curthr->kt_ctx);
 		intr_setipl(oldIPL);       

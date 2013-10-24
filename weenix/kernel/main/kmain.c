@@ -148,12 +148,14 @@ bootstrap(int arg1, void *arg2)
         pt_template_init();
 
         curproc=proc_create("idle");
-        KASSERT(NULL != curproc); /* make sure that the "idle" process has been created successfully */
+        KASSERT(NULL != curproc);
+		dbg(DBG_INIT,"(GRADING1 1.a) The \"idle\" process had been created.\n");
         KASSERT(PID_IDLE == curproc->p_pid); /* make sure that what has been created is the "idle" process */
+		dbg(DBG_INIT,"(GRADING1 1.a) The current process is \"idle\" process.\n");
         curthr=kthread_create(curproc,idleproc_run,0,NULL);
         KASSERT(NULL != curthr); /* make sure that the thread for the "idle" process has been created successfully */
+		dbg(DBG_INIT,"(GRADING1 1.a) The thread of \"idle\" process had been created.\n");
         context_make_active(&curthr->kt_ctx);
-
         panic("weenix returned to bootstrap()!!! BAD!!!\n");
         return NULL;
 }
@@ -200,6 +202,7 @@ idleproc_run(int arg1, void *arg2)
 
         /* Run initproc */
         sched_make_runnable(initthr);
+		dbg(DBG_INIT, "INIT process lunched!\n");
         /* Now wait for it */
         child = do_waitpid(-1, 0, &status);
         KASSERT(PID_INIT == child);
@@ -244,9 +247,12 @@ initproc_create(void)
 {
         proc_t *initproc=proc_create("init");
         KASSERT(NULL != initproc);
+		dbg(DBG_INIT,"(GRADING1 1.b) The process \"init\" had been created.");
         KASSERT(PID_INIT == initproc->p_pid);
+		dbg(DBG_INIT,"(GRADING1 1.b) The current process is the \"init\" process.");
         kthread_t *initthr=kthread_create(initproc,initproc_run,0,NULL);
         KASSERT(initthr != NULL);
+		dbg(DBG_INIT,"(GRADING1 1.b) The thread of process \"init\" had been created.");
         return initthr;
 }
 

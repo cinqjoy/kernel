@@ -95,8 +95,8 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 {
 		kthread_t * new_kthread;
 
-		KASSERT(NULL != p);
-
+		KASSERT(NULL != p);/* should have associated process */
+        dbg(DBG_THR,"(GRADING1 3.a) Should have associated process.\n");
 		new_kthread = (kthread_t *) slab_obj_alloc(kthread_allocator);
 		KASSERT(NULL != new_kthread);
 		new_kthread->kt_retval = NULL; /* void point, setup to null since havent return*/
@@ -161,7 +161,8 @@ kthread_cancel(kthread_t *kthr, void *retval)
 {
 		/*MC
 		 canceled thread is not null and current thread is not */
-        KASSERT(kthr!=NULL);
+        KASSERT(kthr!=NULL);/* should have thread */
+		dbg(DBG_THR,"(GRADING1 3.b) Should have thread.\n");
         KASSERT(curthr!=NULL);
 		if (kthr == curthr) /* must be runnable */
 		{
@@ -170,7 +171,9 @@ kthread_cancel(kthread_t *kthr, void *retval)
 		else
 		{
 			KASSERT(kthr->kt_state== KT_SLEEP || kthr->kt_state==KT_SLEEP_CANCELLABLE);
-			kthr->kt_cancelled = 1; 
+			kthr->kt_cancelled = 1;
+			kthr->kt_retval = retval;			
+			
 			if (kthr->kt_state==KT_SLEEP_CANCELLABLE)
 			{
 				sched_cancel(kthr);
@@ -195,11 +198,12 @@ kthread_cancel(kthread_t *kthr, void *retval)
 void
 kthread_exit(void *retval)
 {
-
+        KASSERT(!curthr->kt_wchan);/* queue should be empty */
+        KASSERT(!curthr->kt_qlink.l_next && !curthr->kt_qlink.l_prev);/* queue should be empty */
+        KASSERT(curthr->kt_proc == curproc);
+		dbg(DBG_THR,"(GRADING1 3.c) Queue should be empty.\n");
         KASSERT(curthr!=NULL);
-		dbg(DBG_THR,"The ");
 		proc_thread_exited(retval);
-		dbg(DBG_THR,"thread (0x%p) exited.\n",curthr);
 
 		curthr->kt_state = KT_EXITED;
 		curthr->kt_retval = retval;

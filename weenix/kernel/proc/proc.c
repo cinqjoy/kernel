@@ -88,8 +88,10 @@ proc_create(char *name)
 		myProc->p_pid = _proc_getid();
 		/* pid can only be PID_IDLE if this is the first process */
 		KASSERT(PID_IDLE != myProc->p_pid || list_empty(&_proc_list)); 
+		dbg(DBG_PROC,"(GRADING1 2.a) pid can only be PID_IDLE if this is the first process.\n");
 		/* pid can only be PID_INIT when creating from idle process */
 		KASSERT(PID_INIT != myProc->p_pid || PID_IDLE == curproc->p_pid);
+		dbg(DBG_PROC,"(GRADING1 2.a) pid can only be PID_INIT when creating from idle process.\n");
 		if(myProc->p_pid == PID_INIT){
 			proc_initproc = myProc;	
 		}
@@ -157,9 +159,12 @@ void
 proc_cleanup(int status)
 {
 	KASSERT(NULL != proc_initproc); /* should have an "init" process */
+	dbg(DBG_PROC,"(GRADING1 2.b) Must have an \"init\" process.\n");
 	KASSERT(1 <= curproc->p_pid); /* this process should not be idle process */
+	dbg(DBG_PROC,"(GRADING1 2.b) This process should not be \"idle\" process.\n");
 	KASSERT(NULL != curproc->p_pproc); /* this process should have parent process */
-	
+	dbg(DBG_PROC,"(GRADING1 2.b) This process should have parent process.\n");
+
 	proc_t *myProc;
 	curproc->p_state=PROC_DEAD;
 	curproc->p_status=status;
@@ -177,8 +182,8 @@ proc_cleanup(int status)
 	}
 	sched_wakeup_on(&curproc->p_pproc->p_wait);
 	
-	
 	KASSERT(NULL != curproc->p_pproc); /* this process should have parent process */
+	dbg(DBG_PROC,"(GRADING1 2.b) This process should have parent process.\n");
 }
 
 /*
@@ -262,12 +267,16 @@ proc_thread_exited(void *retval)
         list_iterate_begin(&curproc->p_threads, kthr, kthread_t, kt_plink) {
 				if(kthr->kt_state != KT_EXITED)
 					count++;
-        } list_iterate_end(); 
+        } list_iterate_end();
 
 		KASSERT(count != 0 && "All threads of curproc are dead!\n");
 		if (count == 1){
-			dbg(DBG_THR,"last ");
+			dbg(DBG_THR,"Last thread (0x%p) exited from the proc \"%s\" %d (0x%p)\n",
+					curthr, curproc->p_comm, curproc->p_pid, curproc);
 			proc_cleanup(curproc->p_status);
+		}else{
+			dbg(DBG_THR,"The thread (0x%p) exited from the proc \"%s\" %d (0x%p)\n",
+					curthr, curproc->p_comm, curproc->p_pid, curproc);
 		}
 }
 
@@ -294,32 +303,38 @@ do_waitpid(pid_t pid, int options, int *status)
 	proc_t *myProc;
 	kthread_t *myThread;
 	KASSERT(options==0 && pid>=-1);
-	if(list_empty(&curproc->p_children)){
+ 	if(list_empty(&curproc->p_children)){
 		return -ECHILD;
 	}
-	if(pid!=-1){
-		list_iterate_begin(&curproc->p_children,myProc,proc_t,p_child_link){
-			if(myProc->p_pid==pid){
-						is_inside=1;
-			} 
-		}list_iterate_end();
-		if(!is_inside)
-			return -ECHILD;
-	}
+	
+	list_iterate_begin(&curproc->p_children,myProc,proc_t,p_child_link){
+		if(myProc->p_pid==pid){
+			is_inside=1;
+		} 
+	}list_iterate_end();
+	if(!is_inside && pid != -1)
+		return -ECHILD;
+	KASSERT(-1 == pid || is_inside == 1); /* should be able to find the process */
+    dbg(DBG_INIT,"(GRADING1 2.c) The child process has been found.\n");
+
 	while(1){
 		if(pid==-1){
 			list_iterate_begin(&curproc->p_children,myProc,proc_t,p_child_link){
+				KASSERT(NULL != myProc); /* the process should not be NULL */
+				dbg(DBG_PROC,"(GRADING1 2.c) The process should not be NULL.\n");
 				if(myProc->p_state==PROC_DEAD){
 					*status = myProc->p_status;
 					myPid = myProc->p_pid;
 					list_iterate_begin(&myProc->p_threads,myThread,kthread_t,kt_plink){
 						/* thr points to a thread to be destroied */
 						KASSERT(KT_EXITED == myThread->kt_state);
+						dbg(DBG_PROC,"(GRADING1 2.c) The state of the thread that are going to be destroied should be exited.\n");
 						kthread_destroy(myThread);
 					}list_iterate_end();
 					list_remove(&myProc->p_list_link);
 					list_remove(&myProc->p_child_link);
 					KASSERT(NULL != myProc->p_pagedir); /* this process should have pagedir */
+					dbg(DBG_PROC,"(GRADING1 2.c) This process should have pagedir.\n");
 					pt_destroy_pagedir(myProc->p_pagedir);
 					slab_obj_free(proc_allocator,myProc);
 					return myPid;
@@ -327,17 +342,21 @@ do_waitpid(pid_t pid, int options, int *status)
 			}list_iterate_end();
 		}else{
 			myProc = proc_lookup(pid);
+			KASSERT(NULL != myProc); /* the process should not be NULL */
+			dbg(DBG_PROC,"(GRADING1 2.c) The process should not be NULL.\n");
 			if(myProc->p_state==PROC_DEAD){
 				*status = myProc->p_status;
 				myPid = myProc->p_pid;
 				list_iterate_begin(&myProc->p_threads,myThread,kthread_t,kt_plink){
 					/* thr points to a thread to be destroied */
 					KASSERT(KT_EXITED == myThread->kt_state);
+					dbg(DBG_PROC,"(GRADING1 2.c) The state of the thread that are going to be destroied should be exited.\n");
 					kthread_destroy(myThread);
 				}list_iterate_end();
 				list_remove(&myProc->p_list_link);
 				list_remove(&myProc->p_child_link);
 				KASSERT(NULL != myProc->p_pagedir); /* this process should have pagedir */
+				dbg(DBG_PROC,"(GRADING1 2.c) This process should have pagedir.\n");
 				pt_destroy_pagedir(myProc->p_pagedir);
 				slab_obj_free(proc_allocator,myProc);
 				return myPid;

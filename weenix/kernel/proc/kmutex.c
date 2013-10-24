@@ -30,10 +30,12 @@ kmutex_lock(kmutex_t *mtx)
 {
         KASSERT(curthr && (curthr != mtx->km_holder));
         if(mtx->km_holder){
+		   dbg(DBG_THR, "The mutex (0x%p) is hoding by the thread (0x%p).\n",mtx,mtx->km_holder);
            sched_sleep_on(&mtx->km_waitq);        
            }
         else{
            mtx->km_holder=curthr;
+		   dbg(DBG_THR, "Current thread (0x%p) gets the mutex (0x%p).\n",curthr,mtx);
            }
 }
 
@@ -46,12 +48,13 @@ kmutex_lock_cancellable(kmutex_t *mtx)
 {
         KASSERT(curthr && (curthr != mtx->km_holder));
         if(mtx->km_holder){
+		   dbg(DBG_THR, "The mutex (0x%p) is hoding by the thread (0x%p).\n",mtx,mtx->km_holder);
            if(sched_cancellable_sleep_on(&mtx->km_waitq)==-EINTR)
               return -EINTR;
-           }
-        else{
+        }else
            mtx->km_holder=curthr;
-           }
+        
+		dbg(DBG_THR, "Current thread (0x%p) gets the mutex (0x%p).\n",curthr,mtx);
         return 0;
 }
 
@@ -73,6 +76,7 @@ void
 kmutex_unlock(kmutex_t *mtx)
 {
         KASSERT(curthr && (curthr == mtx->km_holder));
+		dbg(DBG_THR, "Current thread (0x%p) release the mutex (0x%p).\n", curthr, mtx);
         mtx->km_holder=sched_wakeup_on(&mtx->km_waitq); 
         KASSERT(curthr != mtx->km_holder);
 }
