@@ -102,6 +102,8 @@ sched_sleep_on(ktqueue_t *q)
 {
         /*NOT_YET_IMPLEMENTED("PROCS: sched_sleep_on");*/
 		/*Should I setup the kt_state before sched_switch or not?*/
+		dbg(DBG_SCHED, "The thread (0x%p) of proc \"%s\" %d (0x%p) is going to sleep.\n",
+						curthr, curproc->p_comm, curproc->p_pid, curproc);
 		curthr->kt_state = KT_SLEEP;
 		ktqueue_enqueue(q,curthr);
 		sched_switch();		
@@ -120,18 +122,20 @@ sched_cancellable_sleep_on(ktqueue_t *q)
 {
 		
 		if(curthr->kt_cancelled){
-				dbg(DBG_SCHED, "trap: CANCELLING: thread %p of proc %d "
-                    "(0x%p)\n", curthr, curproc->p_pid, curproc);
+				dbg(DBG_SCHED, "trap: CANCELLING: thread %p of proc %d (0x%p)\n",
+						curthr, curproc->p_pid, curproc);
 				return -EINTR;
 		}
 
+		dbg(DBG_SCHED, "The thread (0x%p) of proc \"%s\" %d (0x%p) is going to sleep but cancellable.\n",
+						curthr, curproc->p_comm, curproc->p_pid, curproc);
 		curthr -> kt_state = KT_SLEEP_CANCELLABLE;
 		ktqueue_enqueue(q,curthr);		
 		sched_switch();
 
 		if(curthr->kt_cancelled){
-				dbg(DBG_SCHED, "trap: CANCELLING: thread %p of proc %d "
-                    "(0x%p)\n", curthr, curproc->p_pid, curproc);
+				dbg(DBG_SCHED, "trap: CANCELLING: thread %p of proc %d (0x%p)\n",
+						curthr, curproc->p_pid, curproc);
 				return -EINTR;
 		}
 
@@ -143,12 +147,15 @@ sched_wakeup_on(ktqueue_t *q)
 {
         /*NOT_YET_IMPLEMENTED("PROCS: sched_wakeup_on");*/
 		kthread_t *thr;
-		
 		thr = ktqueue_dequeue(q);
-		if(thr != NULL)
+		if(thr != NULL){
+			KASSERT((thr->kt_state == KT_SLEEP) || (thr->kt_state == KT_SLEEP_CANCELLABLE));
+			dbg(DBG_SCHED,"(GRADING1 4.a) The state of the thread should be sleep.\n");
 			sched_make_runnable(thr);
-
-        return thr;
+			dbg(DBG_SCHED, "The thread (0x%p) of proc \"%s\" %d (0x%p) had been waken up.\n",
+							curthr, curproc->p_comm, curproc->p_pid, curproc);
+		}
+		return thr;
 }
 
 void
@@ -174,6 +181,8 @@ sched_cancel(struct kthread *kthr)
 		KASSERT(kthr->kt_state != KT_NO_STATE && 
 				kthr->kt_state != KT_EXITED);
 		kthr->kt_cancelled = 1;
+		dbg(DBG_SCHED, "The thread (0x%p) of proc \"%s\" %d (0x%p) has been cancelled.\n",
+						curthr, curproc->p_comm, curproc->p_pid, curproc);
         if(kthr->kt_state == KT_SLEEP_CANCELLABLE){
 			ktqueue_remove(kthr->kt_wchan, kthr);
 			sched_make_runnable(kthr);
@@ -262,6 +271,8 @@ sched_make_runnable(kthread_t *thr)
 		intr_setipl(IPL_HIGH);
 		
 		thr->kt_state = KT_RUN;
+		KASSERT(&kt_runq != thr->kt_wchan); /* make sure thread is not blocked */
+		dbg(DBG_SCHED,"(GRADING1 4.b) The thread is not blocked.\n");
 		ktqueue_enqueue(&kt_runq,thr);
 		
 		intr_setipl(oldIPL);       

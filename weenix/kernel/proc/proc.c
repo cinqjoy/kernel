@@ -86,11 +86,11 @@ proc_create(char *name)
 		int i;
 		myProc = (proc_t*)slab_obj_alloc(proc_allocator);
 		myProc->p_pid = _proc_getid();
-		/* pid can only be PID_IDLE if this is the first process */
 		KASSERT(PID_IDLE != myProc->p_pid || list_empty(&_proc_list)); 
-		dbg(DBG_PROC,"(GRADING1 2.a) pid can only be PID_IDLE if this is the first process.\n");
-		/* pid can only be PID_INIT when creating from idle process */
+		/* pid can only be PID_IDLE if this is the first process */
+		dbg(DBG_PROC,"(GRADING1 2.a) pid can only be PID_IDLE if this is the first process.\n");		
 		KASSERT(PID_INIT != myProc->p_pid || PID_IDLE == curproc->p_pid);
+		/* pid can only be PID_INIT when creating from idle process */
 		dbg(DBG_PROC,"(GRADING1 2.a) pid can only be PID_INIT when creating from idle process.\n");
 		if(myProc->p_pid == PID_INIT){
 			proc_initproc = myProc;	
@@ -159,7 +159,7 @@ void
 proc_cleanup(int status)
 {
 	KASSERT(NULL != proc_initproc); /* should have an "init" process */
-	dbg(DBG_PROC,"(GRADING1 2.b) Must have an \"init\" process.\n");
+	dbg(DBG_PROC,"(GRADING1 2.b) The \"init\" process should not ne NULL.\n");
 	KASSERT(1 <= curproc->p_pid); /* this process should not be idle process */
 	dbg(DBG_PROC,"(GRADING1 2.b) This process should not be \"idle\" process.\n");
 	KASSERT(NULL != curproc->p_pproc); /* this process should have parent process */
@@ -298,7 +298,7 @@ proc_thread_exited(void *retval)
 pid_t
 do_waitpid(pid_t pid, int options, int *status)
 {
-        int is_inside=0;
+    int is_inside=0;
 	pid_t myPid;
 	proc_t *myProc;
 	kthread_t *myThread;
@@ -306,7 +306,6 @@ do_waitpid(pid_t pid, int options, int *status)
  	if(list_empty(&curproc->p_children)){
 		return -ECHILD;
 	}
-	
 	list_iterate_begin(&curproc->p_children,myProc,proc_t,p_child_link){
 		if(myProc->p_pid==pid){
 			is_inside=1;
@@ -315,13 +314,12 @@ do_waitpid(pid_t pid, int options, int *status)
 	if(!is_inside && pid != -1)
 		return -ECHILD;
 	KASSERT(-1 == pid || is_inside == 1); /* should be able to find the process */
-    dbg(DBG_INIT,"(GRADING1 2.c) The child process has been found.\n");
+    dbg(DBG_PROC,"(GRADING1 2.c) The child process has been found.\n");
 
 	while(1){
 		if(pid==-1){
 			list_iterate_begin(&curproc->p_children,myProc,proc_t,p_child_link){
-				KASSERT(NULL != myProc); /* the process should not be NULL */
-				dbg(DBG_PROC,"(GRADING1 2.c) The process should not be NULL.\n");
+			    KASSERT(NULL != myProc); /* the process should not be NULL */
 				if(myProc->p_state==PROC_DEAD){
 					*status = myProc->p_status;
 					myPid = myProc->p_pid;
@@ -343,7 +341,7 @@ do_waitpid(pid_t pid, int options, int *status)
 		}else{
 			myProc = proc_lookup(pid);
 			KASSERT(NULL != myProc); /* the process should not be NULL */
-			dbg(DBG_PROC,"(GRADING1 2.c) The process should not be NULL.\n");
+			dbg(DBG_PROC,"(GRADING1 2.c) The process should be in the process list.\n");
 			if(myProc->p_state==PROC_DEAD){
 				*status = myProc->p_status;
 				myPid = myProc->p_pid;

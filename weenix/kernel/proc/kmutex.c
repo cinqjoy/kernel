@@ -29,6 +29,7 @@ void
 kmutex_lock(kmutex_t *mtx)
 {
         KASSERT(curthr && (curthr != mtx->km_holder));
+		dbg(DBG_THR, "(GRADING1 5.a) The mutex is not taken by current thread.\n");
         if(mtx->km_holder){
 		   dbg(DBG_THR, "The mutex (0x%p) is hoding by the thread (0x%p).\n",mtx,mtx->km_holder);
            sched_sleep_on(&mtx->km_waitq);        
@@ -47,6 +48,7 @@ int
 kmutex_lock_cancellable(kmutex_t *mtx)
 {
         KASSERT(curthr && (curthr != mtx->km_holder));
+		dbg(DBG_THR, "(GRADING1 5.b) The mutex is not taken by current thread.\n");
         if(mtx->km_holder){
 		   dbg(DBG_THR, "The mutex (0x%p) is hoding by the thread (0x%p).\n",mtx,mtx->km_holder);
            if(sched_cancellable_sleep_on(&mtx->km_waitq)==-EINTR)
@@ -76,7 +78,8 @@ void
 kmutex_unlock(kmutex_t *mtx)
 {
         KASSERT(curthr && (curthr == mtx->km_holder));
-		dbg(DBG_THR, "Current thread (0x%p) release the mutex (0x%p).\n", curthr, mtx);
+		dbg(DBG_THR, "(GRADING1 5.c) The current thread hold the mutex.\n");	
         mtx->km_holder=sched_wakeup_on(&mtx->km_waitq); 
         KASSERT(curthr != mtx->km_holder);
+		dbg(DBG_THR, "(GRADING1 5.c) Current thread (0x%p) release the mutex (0x%p).\n", curthr, mtx);
 }

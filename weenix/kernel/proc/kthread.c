@@ -96,7 +96,7 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 		kthread_t * new_kthread;
 
 		KASSERT(NULL != p);/* should have associated process */
-        dbg(DBG_THR,"(GRADING1 3.a) Should have associated process.\n");
+        dbg(DBG_THR,"(GRADING1 3.a) The associated process should not be NULL.\n");
 		new_kthread = (kthread_t *) slab_obj_alloc(kthread_allocator);
 		KASSERT(NULL != new_kthread);
 		new_kthread->kt_retval = NULL; /* void point, setup to null since havent return*/
@@ -120,7 +120,8 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 						(void *) new_kthread->kt_kstack , 
 						DEFAULT_STACK_SIZE, 
 						new_kthread->kt_proc->p_pagedir);
-
+		dbg(DBG_THR, "The thread (0x%p) of proc \"%s\" %d (0x%p) has been created.\n",
+						new_kthread, p->p_comm, p->p_pid, p);
 		return new_kthread;
 
         /*NOT_YET_IMPLEMENTED("PROCS: kthread_create");
@@ -162,7 +163,7 @@ kthread_cancel(kthread_t *kthr, void *retval)
 		/*MC
 		 canceled thread is not null and current thread is not */
         KASSERT(kthr!=NULL);/* should have thread */
-		dbg(DBG_THR,"(GRADING1 3.b) Should have thread.\n");
+		dbg(DBG_THR,"(GRADING1 3.b) The associated thread should not be NULL.\n");
         KASSERT(curthr!=NULL);
 		if (kthr == curthr) /* must be runnable */
 		{
@@ -198,11 +199,14 @@ kthread_cancel(kthread_t *kthr, void *retval)
 void
 kthread_exit(void *retval)
 {
-        KASSERT(!curthr->kt_wchan);/* queue should be empty */
-        KASSERT(!curthr->kt_qlink.l_next && !curthr->kt_qlink.l_prev);/* queue should be empty */
-        KASSERT(curthr->kt_proc == curproc);
-		dbg(DBG_THR,"(GRADING1 3.c) Queue should be empty.\n");
         KASSERT(curthr!=NULL);
+        KASSERT(!curthr->kt_wchan);/* queue should be empty */
+		dbg(DBG_THR,"(GRADING1 3.c) The current thread should not be in any ktqueue.\n");
+        KASSERT(!curthr->kt_qlink.l_next && !curthr->kt_qlink.l_prev);/* queue should be empty */
+		dbg(DBG_THR,"(GRADING1 3.c) The current thread should not link in any ktqueue.\n");
+        KASSERT(curthr->kt_proc == curproc);
+		dbg(DBG_THR,"(GRADING1 3.c) The thread must exit by itself.\n");
+        
 		proc_thread_exited(retval);
 
 		curthr->kt_state = KT_EXITED;
