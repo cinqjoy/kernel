@@ -41,8 +41,23 @@
 int
 do_read(int fd, void *buf, size_t nbytes)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_read");
-        return -1;
+        file_t *ft;
+        int nb;
+
+        if(fd<-1 || fd >= NFILES) return -EBADF;
+        ft=fget(fd);
+        if((ft->f_mode&FMODE_READ) != FMODE_READ){
+                fput(fd);
+		return -EBADF;
+		}
+        if(S_ISDIR(ft->f_vnode->vn_mode)){
+		return -EISDIR;
+		}
+        nb=ft->f_vnode->vn_ops->read(ft->f_vnode, ft->f_pos, buf, nbytes);
+        ft->f_pos+=nb;
+        fput(fd);
+
+        return nb;
 }
 
 /* Very similar to do_read.  Check f_mode to be sure the file is writable.  If
@@ -56,8 +71,23 @@ do_read(int fd, void *buf, size_t nbytes)
 int
 do_write(int fd, const void *buf, size_t nbytes)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_write");
-        return -1;
+        file_t *ft;
+        int nb;
+
+        if(fd<0 || fd >= NFILES) return -EBADF;
+        ft=fget(fd);
+        if((ft->f_mode&FMODE_WRITE) != FMODE_WRITE){
+                fput(fd);
+		return -EBADF;
+		}
+        if((ft->f_mode&FMODE_APPEND) == FMODE_APPEND){
+                ft->f_pos=do_lseek(fd, 0, SEEK_END);
+		}
+        nb=ft->f_vnode->vn_ops->write(ft->f_vnode, ft->f_pos, buf, nbytes);
+        ft->f_pos+=nb;
+        fput(fd);
+
+        return nb;        
 }
 
 /*
@@ -70,8 +100,13 @@ do_write(int fd, const void *buf, size_t nbytes)
 int
 do_close(int fd)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_close");
-        return -1;
+        file_t *ft;
+
+        if(fd<0 || fd >= NFILES) return -EBADF;
+        ft=fget(fd);
+        fput(ft);
+        curproc->p_files[fd]=NULL;
+        return 0;
 }
 
 /* To dup a file:
@@ -93,8 +128,19 @@ do_close(int fd)
 int
 do_dup(int fd)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_dup");
-        return -1;
+	file_t *ft;
+        int dupfd;
+
+	if(fd<0 || fd >= NFILES) return -EBADF;
+        ft=fget(fd);
+        dupfd=get_empty_fd(curproc);
+        if(fupfd<0){
+		fput(ft);
+		return dupfd;
+		} 
+	curproc->p_files[dupfd]=curproc->p_files[fd];
+        
+        return dupfd;
 }
 
 /* Same as do_dup, but insted of using get_empty_fd() to get the new fd,
@@ -109,8 +155,16 @@ do_dup(int fd)
 int
 do_dup2(int ofd, int nfd)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_dup2");
-        return -1;
+	file_t *oft, *nft;
+
+	if(ofd<0 || ofd >= NFILES) return -EBADF;
+	if(nfd<0 || nfd >= NFILES) return -EBADF;
+        if(nfd==ofd) return nfd;
+        oft=fget(ofd);
+        if(curproc->p_files[nfd]) do_close(nfd);
+	curproc->p_files[nfd]=curproc->p_files[ofd];
+        
+        return nfd;
 }
 
 /*
@@ -141,8 +195,23 @@ do_dup2(int ofd, int nfd)
 int
 do_mknod(const char *path, int mode, unsigned devid)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_mknod");
-        return -1;
+	size_t namelen;
+	const char *name;
+	vnode_t *dir, *result;
+
+	if(!S_IFCHR(mode) && !S_IFBLK(mode)) return -EINVAL;/* Q: not sure !S_IFCHR(mode) or S_IFCHR!=mode? */
+	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+
+	dir_namev(path, &namelen, &name, NULL, &dir);
+	vput(dir);
+	ret=lookup(dir, name, namelen, &result);/* If dir has no lookup(), return -ENOTDIR. */
+	if(ret==0){
+		vput(result);
+		return -EEXIST;        
+		}
+	ret=result->vn_ops->mknod(result, name, namelen, mode, devid);
+
+	return ret;	
 }
 
 /* Use dir_namev() to find the vnode of the dir we want to make the new
