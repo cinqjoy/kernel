@@ -53,7 +53,38 @@ int
 dir_namev(const char *pathname, size_t *namelen, const char **name,
           vnode_t *base, vnode_t **res_vnode)
 {
-        NOT_YET_IMPLEMENTED("VFS: dir_namev");
+		char *tok;
+		vnode_t *base_dir;
+		vnode_t *tmp_vnode;
+		int ret;
+
+		if(base == NULL) base_dir = curproc->p_cwd;
+		else base_dir = base;
+
+		if(pathname[0] == '/')
+			base_dir = vfs_root_vn;
+
+		char *last_tok;
+		tok = strtok(pathname,"/");
+		while(tok != NULL){
+				ret = lookup(base_dir, tok, strlen(tok), &tmp_vnode);
+				last_tok = tok;
+				tok = strtok(NULL,"/");
+
+				if(tok != NULL && ret != 0)	return ret;
+				if(tok != NULL){ //except last token
+					base_dir = tmp_vnode;
+					vput(base_dir);
+				}
+		}
+		/*
+		 * Only check the pathname
+		 * Ex: A/B/C
+		 * 	   This function will not check C's availability.
+		 */
+		*res_vnode = tmp_vnode;
+		*namelen = strlen(last_tok);
+		*name = last_tok;
         return 0;
 }
 

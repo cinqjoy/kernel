@@ -255,8 +255,38 @@ do_mknod(const char *path, int mode, unsigned devid)
 int
 do_mkdir(const char *path)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_mkdir");
-        return -1;
+	size_t namelen;
+	const char *name;
+	vnode_t *dir, *result;
+	int ret, lookupret;
+
+	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+
+	ret = dir_namev(path, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
+
+
+	if (ret == -ENOENT ||  ret == -ENOTDIR )
+			return ret;
+
+	lookupret=lookup(dir, name, namelen, &result);
+
+	/*if (lookupret == -ENOENT ||  lookupret == -ENOTDIR )*/
+	if (lookupret == -ENOTDIR )
+	{
+			vput(dir);
+			return lookupret;
+	}
+
+	if (lookupret == 0){ // exsit
+			vput(result);
+		vput(dir);
+		return -EEXIST;
+	}
+
+	ret=dir->vn_ops->mkdir(dir, name, namelen);
+	vput(dir);
+
+	return ret;
 }
 
 /* Use dir_namev() to find the vnode of the directory containing the dir to be
@@ -280,8 +310,32 @@ do_mkdir(const char *path)
 int
 do_rmdir(const char *path)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_rmdir");
-        return -1;
+	size_t namelen;
+	const char *name;
+	vnode_t *dir;
+	int ret;
+	int pathlen = strlen(path);
+
+	if (path[pathlen-1] == '.' && path[pathlen-2] == '.')
+		return 	-ENOTEMPTY;
+
+	if (path[pathlen-1] == '.')
+		return 	-EINVAL;
+
+	if(pathlen > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+
+	ret  = dir_namev(path, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
+
+	if (ret == -ENOENT ||  ret == -ENOTDIR )
+			return ret;
+
+
+	/* no need to check if child is directory, done by PFS		*/
+	ret=dir->vn_ops->rmdir(dir, name, namelen);
+
+	vput(dir);
+
+	return ret;
 }
 
 /*
@@ -300,8 +354,48 @@ do_rmdir(const char *path)
 int
 do_unlink(const char *path)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_unlink");
-        return -1;
+	size_t namelen;
+	const char *name;
+	vnode_t *dir, *result;
+	int ret, lookupret;
+	int pathlen = strlen(path);
+
+	/*if (path[pathlen-1] == '.' && path[pathlen-2] == '.')
+		return 	ENOTEMPTY;
+
+	if (path[pathlen-1] == '.')
+		return 	EINVAL;*/
+
+	if(pathlen > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+
+	ret  = dir_namev(path, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
+
+	if (ret == -ENOENT ||  ret == -ENOTDIR )
+			return ret;
+
+	/* cannot call rmdir since no dir will return */
+	lookupret=lookup(dir, name, namelen, &result);
+
+	if (lookupret == -ENOENT || ret == -ENOTDIR )
+	{
+			vput(dir);
+			return lookupret;
+	}
+
+		if(S_ISDIR(result->vn_mode))
+		{
+			vput(dir);
+			vput(result);
+		return -EISDIR;
+	}
+
+	vput(result);
+	/* kassert checking non dir in unlink */
+	ret=dir->vn_ops->unlink(dir, name, namelen);
+
+	vput(dir);
+
+	return ret;
 }
 
 /* To link:
@@ -326,8 +420,64 @@ do_unlink(const char *path)
 int
 do_link(const char *from, const char *to)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_link");
-        return -1;
+	size_t namelen;
+	const char *name;
+	vnode_t *fromv, *dir, *result;
+	int ret, lookupret;
+	int pathlen;
+
+	pathlen = strlen(from);
+
+	if(pathlen > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+
+	pathlen = strlen(to);
+
+	if(pathlen > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+
+  /* diffeernt order from dir_namev */
+  /* call open_namev */
+	//ret = open_namev(from, O_CREAT || O_RDWR , &fromv, NULL);
+ret = open_namev(from, O_WRONLY , &fromv, NULL);
+
+
+	if (ret == -ENOENT ||  ret == -ENOTDIR  )
+			return ret;
+	/* assume old path must exists according to linux spec*/
+
+	/*vput(fromv);*/
+
+	ret = dir_namev(to, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
+
+	if (ret == -ENOENT ||  ret == -ENOTDIR )
+	{
+			vput(fromv);
+			return ret;
+	}
+
+	lookupret=lookup(dir, name, namelen, &result);/* If dir has no lookup(), return -ENOTDIR. */
+
+	if (lookupret == -ENOTDIR)
+	{
+		vput(fromv);
+		vput(dir);
+		return lookupret;
+	}
+
+	if (lookupret == 0) /* exist */
+	{
+		vput(fromv);
+		vput(dir);
+		vput(result);
+		return -EEXIST;
+	}
+
+
+	ret=dir->vn_ops->link(fromv, dir, name, namelen);
+
+	vput(fromv);
+	vput(dir);
+
+	return ret;
 }
 
 /*      o link newname to oldname
