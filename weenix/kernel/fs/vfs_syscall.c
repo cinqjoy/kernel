@@ -44,13 +44,14 @@ do_read(int fd, void *buf, size_t nbytes)
         file_t *ft;
         int nb;
 
-        if(fd<-1 || fd >= NFILES) return -EBADF;
+        if(fd<-0 || fd >= NFILES) return -EBADF;
         ft=fget(fd);
         if((ft->f_mode&FMODE_READ) != FMODE_READ){
                 fput(fd);
 		return -EBADF;
 		}
         if(S_ISDIR(ft->f_vnode->vn_mode)){
+		fput(fd);
 		return -EISDIR;
 		}
         nb=ft->f_vnode->vn_ops->read(ft->f_vnode, ft->f_pos, buf, nbytes);
@@ -136,7 +137,7 @@ do_dup(int fd)
         dupfd=get_empty_fd(curproc);
         if(fupfd<0){
 		fput(ft);
-		return dupfd;
+		return dupfd;/* return EMFILE */
 		} 
 	curproc->p_files[dupfd]=curproc->p_files[fd];
         
