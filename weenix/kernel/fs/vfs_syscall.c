@@ -48,16 +48,16 @@ do_read(int fd, void *buf, size_t nbytes)
         if( (ft = fget(fd)) == NULL)
         	return -EBADF;
         if( (ft -> f_mode & FMODE_READ) != FMODE_READ){
-            fput(fd);
+            fput(ft);
             return -EBADF;
 		}
         if(S_ISDIR(ft->f_vnode->vn_mode)){
-        	fput(fd);
+        	fput(ft);
         	return -EISDIR;
 		}
         nb = ft -> f_vnode -> vn_ops -> read(ft -> f_vnode, ft -> f_pos, buf, nbytes);
         ft -> f_pos += nb;
-        fput(fd);
+        fput(ft);
 
         return nb;
 }
@@ -77,10 +77,10 @@ do_write(int fd, const void *buf, size_t nbytes)
         int nb;
 
         KASSERT(fd != -1);
-        if( (ft = fget(fd)) == NULL)
+        if( (ft = fget(ft)) == NULL)
         	return -EBADF;
         if( (ft -> f_mode & FMODE_WRITE) != FMODE_WRITE){
-                fput(fd);
+                fput(ft);
                 return -EBADF;
 		}
         if( (ft -> f_mode & FMODE_APPEND) == FMODE_APPEND){
@@ -89,7 +89,7 @@ do_write(int fd, const void *buf, size_t nbytes)
         nb = ft -> f_vnode -> vn_ops -> write(ft -> f_vnode, ft -> f_pos, buf, nbytes);
         ft -> f_pos += nb;
 
-        fput(fd);
+        fput(ft);
         return nb;        
 }
 
@@ -217,23 +217,25 @@ do_mknod(const char *path, int mode, unsigned devid)
 	vnode_t *dir, *result;
 	int namev_ret, lookup_ret, ret;
 
-	if(!S_IFCHR(mode) && !S_IFBLK(mode)) return -EINVAL;/* Q: not sure !S_IFCHR(mode) or S_IFCHR!=mode? */
+	if(!S_IFCHR(mode) && !S_IFBLK(mode)) return -EINVAL;
 	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
 
 	namev_ret = dir_namev(path, &namelen, &name, NULL, &dir);
 	if(namev_ret == -ENOENT || namev_ret == -ENOTDIR) return namev_ret;
 
-
-	lookup_ret = lookup(dir, name, namelen, &result);/* If dir has no lookup(), return -ENOTDIR. */
-	vput(dir);
-	if(lookup_ret == -ENOTDIR) return lookup_ret;
+	lookup_ret = lookup(dir, name, namelen, &result);
+	if(lookup_ret == -ENOTDIR){
+		vput(dir);
+		return lookup_ret;
+		}
 	if(lookup_ret == 0){
+		vput(dir);
 		vput(result);
 		return -EEXIST;        
 	}
-
-	ret = result -> vn_ops -> mknod(result, name, namelen, mode, devid);
-	vput(result);
+	
+	ret = dir -> vn_ops -> mknod(dir, name, namelen, mode, devid);
+	vput(dir);
 
 	return ret;
 }
