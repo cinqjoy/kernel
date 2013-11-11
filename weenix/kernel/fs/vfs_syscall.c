@@ -221,7 +221,7 @@ do_mknod(const char *path, int mode, unsigned devid)
 	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
 
 	namev_ret = dir_namev(path, &namelen, &name, NULL, &dir);
-	if(namev_ret == ENOENT || namev_ret == ENOTDIR) return namev_ret;
+	if(namev_ret == -ENOENT || namev_ret == -ENOTDIR) return namev_ret;
 
 
 	lookup_ret = lookup(dir, name, namelen, &result);/* If dir has no lookup(), return -ENOTDIR. */
@@ -400,8 +400,33 @@ do_getdent(int fd, struct dirent *dirp)
 int
 do_lseek(int fd, int offset, int whence)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_lseek");
-        return -1;
+		file_t *ft;
+		off_t tmp_pos;
+
+		KASSERT(fd != -1);
+		if( (ft = fget(fd)) == NULL)
+			return -EBADF;
+
+		switch(whence){
+			case SEEK_SET:
+				tmp_pos = offset;
+				break;
+			case SEEK_CUR:
+				tmp_pos += offset;
+				break;
+			case SEEK_END:
+				tmp_pos = ft->f_vnode->vn_len + offset;
+				break;
+			default:
+				return -EINVAL;
+				break;
+		}
+		if(tmp_pos < 0)
+			return -EINVAL;
+
+		ft -> f_pos = tmp_pos;
+
+		return 0;
 }
 
 /*
@@ -426,7 +451,7 @@ do_stat(const char *path, struct stat *buf)
 	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
 
 	namev_ret = dir_namev(path, &namelen, &name, NULL, &dir);
-	if(namev_ret == ENOENT || namev_ret == ENOTDIR) return namev_ret;
+	if(namev_ret == -ENOENT || namev_ret == -ENOTDIR) return namev_ret;
 
 
 	lookup_ret = lookup(dir, name, namelen, &result);/* If dir has no lookup(), return -ENOTDIR. */
