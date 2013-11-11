@@ -141,15 +141,8 @@ do_dup(int fd)
     if( (ft = fget(fd)) == NULL)
     	return -EBADF;
 
-<<<<<<< HEAD
-	if(fd<0 || fd >= NFILES) return -EBADF;
-        ft=fget(fd);
-        dupfd=get_empty_fd(curproc);
-        if(dupfd<0){
-=======
     dupfd = get_empty_fd(curproc);
 	if(dupfd < 0){
->>>>>>> 94e673bcc827961bc76800a44180d5bdb51b900d
 		fput(ft);
 		return dupfd;
 	}
