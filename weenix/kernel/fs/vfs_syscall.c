@@ -395,8 +395,25 @@ do_lseek(int fd, int offset, int whence)
 int
 do_stat(const char *path, struct stat *buf)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_stat");
-        return -1;
+	size_t namelen;
+	const char *name;
+	vnode_t *dir, *result;
+	int namev_ret, lookup_ret, ret;
+
+	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+
+	namev_ret = dir_namev(path, &namelen, &name, NULL, &dir);
+	if(namev_ret == ENOENT || namev_ret == ENOTDIR) return namev_ret;
+
+
+	lookup_ret = lookup(dir, name, namelen, &result);/* If dir has no lookup(), return -ENOTDIR. */
+	vput(dir);
+	if(lookup_ret == -ENOTDIR) return lookup_ret;
+
+	ret = result->vn_ops->stat(result, buf);
+	vput(result);
+
+	return ret;
 }
 
 #ifdef __MOUNTING__
