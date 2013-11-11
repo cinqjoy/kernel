@@ -73,6 +73,62 @@ get_empty_fd(proc_t *p)
 int
 do_open(const char *filename, int oflags)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_open");
-        return -1;
+	file_t *ft;
+	int fd, accmode, flag, err;
+	vnode_t *res_vnode;
+
+	fd=get_empty_fd(curproc);
+	if(fd<0) return fd;/* return -EMFILE */
+
+	ft=fget(-1);
+	if(!ft) return -ENOMEM;
+	else curproc->p_files[fd]=ft;
+
+	accmode=oflags&0x00F;
+	flag=oflags&0xF00;
+	switch(accmode){
+		case O_RDONLY: 
+			ft->f_mode=FMODE_READ;
+			break;
+		case O_WRONLY:
+			ft->f_mode=FMODE_WRITE;
+			break;
+		case O_RDWR:
+			ft->f_mode=FMODE_READ|FMODE_WRITE;
+			break;
+		default:
+			fput(ft);
+			return -EINVAL;
+		}
+	if(flag&O_APPEND) ft->f_mode|=FMODE_APPEND;
+
+	if(strlen(filename) > MAXPATHLEN){ 
+		fput(ft);
+		return -ENAMETOOLONG;
+		}
+	if(!(accmode&O_RDONLY) && S_ISDIR(accmode)){
+		fput(ft);
+		return -EISDIR;
+		}
+
+	err=open_namev(filename, flag, &res_vnode, NULL);
+	if(err<0){
+		fput(ft);
+		return err;/* return -ENOENT */
+		}
+	if(S_ISCHR(res_vnode->vn_mode) && !bytedev_lookup(res_vnode->vn_devid)){
+		vput(res_vnode);
+		fput(ft);
+		return -ENXIO;
+		}
+	if(S_ISBLK(res_vnode->vn_mode) && !blockdev_lookup(res_vnode->vn_devid)){
+		vput(res_vnode);
+		fput(ft);
+		return -ENXIO;
+		}
+
+	ft->f_vnode=res_vnode;   
+	ft->f_pos=0;/* ===== NOT SURE ===== */
+
+        return fd;	
 }

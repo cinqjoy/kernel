@@ -25,8 +25,9 @@
 int
 lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 {
-        NOT_YET_IMPLEMENTED("VFS: lookup");
-        return 0;
+        if(dir->vn_ops->lookup == NULL)
+        	return -ENOTDIR;
+        return dir->vn_ops->lookup(dir,name,len,result);
 }
 
 
@@ -52,7 +53,38 @@ int
 dir_namev(const char *pathname, size_t *namelen, const char **name,
           vnode_t *base, vnode_t **res_vnode)
 {
-        NOT_YET_IMPLEMENTED("VFS: dir_namev");
+		char *tok;
+		vnode_t *base_dir;
+		vnode_t *tmp_vnode;
+		int ret;
+
+		if(base == NULL) base_dir = curproc->p_cwd;
+		else base_dir = base;
+
+		if(pathname[0] == '/')
+			base_dir = vfs_root_vn;
+
+		char *last_tok;
+		tok = strtok(pathname,"/");
+		while(tok != NULL){
+				ret = lookup(base_dir, tok, strlen(tok), &tmp_vnode);
+				last_tok = tok;
+				tok = strtok(NULL,"/");
+
+				if(tok != NULL && ret != 0)	return ret;
+				if(tok != NULL){ //except last token
+					base_dir = tmp_vnode;
+					vput(base_dir);
+				}
+		}
+		/*
+		 * Only check the pathname
+		 * Ex: A/B/C
+		 * 	   This function will not check C's availability.
+		 */
+		*res_vnode = tmp_vnode;
+		*namelen = strlen(last_tok);
+		*name = last_tok;
         return 0;
 }
 
@@ -67,8 +99,26 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 int
 open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 {
-        NOT_YET_IMPLEMENTED("VFS: open_namev");
-        return 0;
+	size_t namelen;
+	const char *name;
+	vnode_t *dir, *result;
+	int namev_ret, lookup_ret, create_ret;
+
+	if(strlen(pathname) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+
+	namev_ret = dir_namev(pathname, &namelen, &name, base, &dir);
+	if(namev_ret != 0) return namev_ret;
+
+	lookup_ret = lookup(dir, name, namelen, res_vnode);
+
+	if(lookup_ret != 0 && ((flag || ~O_CREAT) == 0xfff)){
+		create_ret = dir->vn_ops->create(dir,name,res_vnode);
+		vput(dir);
+		return create_ret;
+	}
+	// just return what lookup() returned.
+	vput(dir);
+	return lookup_ret;
 }
 
 #ifdef __GETCWD__

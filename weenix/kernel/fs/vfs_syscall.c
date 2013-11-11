@@ -44,18 +44,20 @@ do_read(int fd, void *buf, size_t nbytes)
         file_t *ft;
         int nb;
 
-        if(fd<-1 || fd >= NFILES) return -EBADF;
-        ft=fget(fd);
-        if((ft->f_mode&FMODE_READ) != FMODE_READ){
-                fput(fd);
-		return -EBADF;
+        KASSERT(fd != -1);
+        if( (ft = fget(fd)) == NULL)
+        	return -EBADF;
+        if( (ft -> f_mode & FMODE_READ) != FMODE_READ){
+            fput(ft);
+            return -EBADF;
 		}
         if(S_ISDIR(ft->f_vnode->vn_mode)){
-		return -EISDIR;
+        	fput(ft);
+        	return -EISDIR;
 		}
-        nb=ft->f_vnode->vn_ops->read(ft->f_vnode, ft->f_pos, buf, nbytes);
-        ft->f_pos+=nb;
-        fput(fd);
+        nb = ft -> f_vnode -> vn_ops -> read(ft -> f_vnode, ft -> f_pos, buf, nbytes);
+        ft -> f_pos += nb;
+        fput(ft);
 
         return nb;
 }
@@ -74,19 +76,20 @@ do_write(int fd, const void *buf, size_t nbytes)
         file_t *ft;
         int nb;
 
-        if(fd<0 || fd >= NFILES) return -EBADF;
-        ft=fget(fd);
-        if((ft->f_mode&FMODE_WRITE) != FMODE_WRITE){
-                fput(fd);
-		return -EBADF;
+        KASSERT(fd != -1);
+        if( (ft = fget(ft)) == NULL)
+        	return -EBADF;
+        if( (ft -> f_mode & FMODE_WRITE) != FMODE_WRITE){
+                fput(ft);
+                return -EBADF;
 		}
-        if((ft->f_mode&FMODE_APPEND) == FMODE_APPEND){
-                ft->f_pos=do_lseek(fd, 0, SEEK_END);
+        if( (ft -> f_mode & FMODE_APPEND) == FMODE_APPEND){
+                ft -> f_pos = do_lseek(fd, 0, SEEK_END);
 		}
-        nb=ft->f_vnode->vn_ops->write(ft->f_vnode, ft->f_pos, buf, nbytes);
-        ft->f_pos+=nb;
-        fput(fd);
+        nb = ft -> f_vnode -> vn_ops -> write(ft -> f_vnode, ft -> f_pos, buf, nbytes);
+        ft -> f_pos += nb;
 
+        fput(ft);
         return nb;        
 }
 
@@ -102,9 +105,12 @@ do_close(int fd)
 {
         file_t *ft;
 
-        if(fd<0 || fd >= NFILES) return -EBADF;
-        ft=fget(fd);
+        KASSERT(fd != -1);
+        if( (ft = fget(fd)) == NULL)
+        	return -EBADF;
+
         fput(ft);
+
         curproc->p_files[fd]=NULL;
         return 0;
 }
@@ -129,18 +135,27 @@ int
 do_dup(int fd)
 {
 	file_t *ft;
-        int dupfd;
+	int dupfd;
 
+    KASSERT(fd != -1);
+    if( (ft = fget(fd)) == NULL)
+    	return -EBADF;
+
+<<<<<<< HEAD
 	if(fd<0 || fd >= NFILES) return -EBADF;
         ft=fget(fd);
         dupfd=get_empty_fd(curproc);
         if(dupfd<0){
+=======
+    dupfd = get_empty_fd(curproc);
+	if(dupfd < 0){
+>>>>>>> 94e673bcc827961bc76800a44180d5bdb51b900d
 		fput(ft);
 		return dupfd;
-		} 
-	curproc->p_files[dupfd]=curproc->p_files[fd];
+	}
+	curproc -> p_files[dupfd] = curproc -> p_files[fd];
         
-        return dupfd;
+    return dupfd;
 }
 
 /* Same as do_dup, but insted of using get_empty_fd() to get the new fd,
@@ -157,14 +172,23 @@ do_dup2(int ofd, int nfd)
 {
 	file_t *oft, *nft;
 
-	if(ofd<0 || ofd >= NFILES) return -EBADF;
-	if(nfd<0 || nfd >= NFILES) return -EBADF;
-        if(nfd==ofd) return nfd;
-        oft=fget(ofd);
-        if(curproc->p_files[nfd]) do_close(nfd);
+    KASSERT(ofd != -1);
+    if( (nft = fget(ofd)) == NULL)
+    	return -EBADF;
+
+    if(nfd == ofd){
+    	fput(nft);
+    	return nfd;
+    }
+
+    if(nfd < 0 || nfd >= NFILES)
+    	return -EBADF;
+
+    if(curproc->p_files[nfd] != NULL)
+    	do_close(nfd);
 	curproc->p_files[nfd]=curproc->p_files[ofd];
         
-        return nfd;
+    return nfd;
 }
 
 /*
@@ -198,20 +222,29 @@ do_mknod(const char *path, int mode, unsigned devid)
 	size_t namelen;
 	const char *name;
 	vnode_t *dir, *result;
+	int namev_ret, lookup_ret, ret;
 
-	if(!S_IFCHR(mode) && !S_IFBLK(mode)) return -EINVAL;/* Q: not sure !S_IFCHR(mode) or S_IFCHR!=mode? */
+	if(!S_IFCHR(mode) && !S_IFBLK(mode)) return -EINVAL;
 	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
 
-	dir_namev(path, &namelen, &name, NULL, &dir);
-	vput(dir);
-	ret=lookup(dir, name, namelen, &result);/* If dir has no lookup(), return -ENOTDIR. */
-	if(ret==0){
+	namev_ret = dir_namev(path, &namelen, &name, NULL, &dir);
+	if(namev_ret == -ENOENT || namev_ret == -ENOTDIR) return namev_ret;
+
+	lookup_ret = lookup(dir, name, namelen, &result);
+	if(lookup_ret == -ENOTDIR){
+		vput(dir);
+		return lookup_ret;
+		}
+	if(lookup_ret == 0){
+		vput(dir);
 		vput(result);
 		return -EEXIST;        
-		}
-	ret=result->vn_ops->mknod(result, name, namelen, mode, devid);
+	}
+	
+	ret = dir -> vn_ops -> mknod(dir, name, namelen, mode, devid);
+	vput(dir);
 
-	return ret;	
+	return ret;
 }
 
 /* Use dir_namev() to find the vnode of the dir we want to make the new
@@ -231,8 +264,38 @@ do_mknod(const char *path, int mode, unsigned devid)
 int
 do_mkdir(const char *path)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_mkdir");
-        return -1;
+	size_t namelen;
+	const char *name;
+	vnode_t *dir, *result;
+	int ret, lookupret;
+
+	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+
+	ret = dir_namev(path, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
+
+
+	if (ret == -ENOENT ||  ret == -ENOTDIR )
+			return ret;
+
+	lookupret=lookup(dir, name, namelen, &result);
+
+	/*if (lookupret == -ENOENT ||  lookupret == -ENOTDIR )*/
+	if (lookupret == -ENOTDIR )
+	{
+			vput(dir);
+			return lookupret;
+	}
+
+	if (lookupret == 0){ // exsit
+			vput(result);
+		vput(dir);
+		return -EEXIST;
+	}
+
+	ret=dir->vn_ops->mkdir(dir, name, namelen);
+	vput(dir);
+
+	return ret;
 }
 
 /* Use dir_namev() to find the vnode of the directory containing the dir to be
@@ -256,8 +319,32 @@ do_mkdir(const char *path)
 int
 do_rmdir(const char *path)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_rmdir");
-        return -1;
+	size_t namelen;
+	const char *name;
+	vnode_t *dir;
+	int ret;
+	int pathlen = strlen(path);
+
+	if (path[pathlen-1] == '.' && path[pathlen-2] == '.')
+		return 	-ENOTEMPTY;
+
+	if (path[pathlen-1] == '.')
+		return 	-EINVAL;
+
+	if(pathlen > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+
+	ret  = dir_namev(path, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
+
+	if (ret == -ENOENT ||  ret == -ENOTDIR )
+			return ret;
+
+
+	/* no need to check if child is directory, done by PFS		*/
+	ret=dir->vn_ops->rmdir(dir, name, namelen);
+
+	vput(dir);
+
+	return ret;
 }
 
 /*
@@ -276,8 +363,48 @@ do_rmdir(const char *path)
 int
 do_unlink(const char *path)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_unlink");
-        return -1;
+	size_t namelen;
+	const char *name;
+	vnode_t *dir, *result;
+	int ret, lookupret;
+	int pathlen = strlen(path);
+
+	/*if (path[pathlen-1] == '.' && path[pathlen-2] == '.')
+		return 	ENOTEMPTY;
+
+	if (path[pathlen-1] == '.')
+		return 	EINVAL;*/
+
+	if(pathlen > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+
+	ret  = dir_namev(path, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
+
+	if (ret == -ENOENT ||  ret == -ENOTDIR )
+			return ret;
+
+	/* cannot call rmdir since no dir will return */
+	lookupret=lookup(dir, name, namelen, &result);
+
+	if (lookupret == -ENOENT || ret == -ENOTDIR )
+	{
+			vput(dir);
+			return lookupret;
+	}
+
+		if(S_ISDIR(result->vn_mode))
+		{
+			vput(dir);
+			vput(result);
+		return -EISDIR;
+	}
+
+	vput(result);
+	/* kassert checking non dir in unlink */
+	ret=dir->vn_ops->unlink(dir, name, namelen);
+
+	vput(dir);
+
+	return ret;
 }
 
 /* To link:
@@ -302,8 +429,64 @@ do_unlink(const char *path)
 int
 do_link(const char *from, const char *to)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_link");
-        return -1;
+	size_t namelen;
+	const char *name;
+	vnode_t *fromv, *dir, *result;
+	int ret, lookupret;
+	int pathlen;
+
+	pathlen = strlen(from);
+
+	if(pathlen > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+
+	pathlen = strlen(to);
+
+	if(pathlen > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+
+  /* diffeernt order from dir_namev */
+  /* call open_namev */
+	//ret = open_namev(from, O_CREAT || O_RDWR , &fromv, NULL);
+ret = open_namev(from, O_WRONLY , &fromv, NULL);
+
+
+	if (ret == -ENOENT ||  ret == -ENOTDIR  )
+			return ret;
+	/* assume old path must exists according to linux spec*/
+
+	/*vput(fromv);*/
+
+	ret = dir_namev(to, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
+
+	if (ret == -ENOENT ||  ret == -ENOTDIR )
+	{
+			vput(fromv);
+			return ret;
+	}
+
+	lookupret=lookup(dir, name, namelen, &result);/* If dir has no lookup(), return -ENOTDIR. */
+
+	if (lookupret == -ENOTDIR)
+	{
+		vput(fromv);
+		vput(dir);
+		return lookupret;
+	}
+
+	if (lookupret == 0) /* exist */
+	{
+		vput(fromv);
+		vput(dir);
+		vput(result);
+		return -EEXIST;
+	}
+
+
+	ret=dir->vn_ops->link(fromv, dir, name, namelen);
+
+	vput(fromv);
+	vput(dir);
+
+	return ret;
 }
 
 /*      o link newname to oldname
@@ -437,8 +620,33 @@ do_getdent(int fd, struct dirent *dirp)
 int
 do_lseek(int fd, int offset, int whence)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_lseek");
-        return -1;
+		file_t *ft;
+		off_t tmp_pos;
+
+		KASSERT(fd != -1);
+		if( (ft = fget(fd)) == NULL)
+			return -EBADF;
+
+		switch(whence){
+			case SEEK_SET:
+				tmp_pos = offset;
+				break;
+			case SEEK_CUR:
+				tmp_pos += offset;
+				break;
+			case SEEK_END:
+				tmp_pos = ft->f_vnode->vn_len + offset;
+				break;
+			default:
+				return -EINVAL;
+				break;
+		}
+		if(tmp_pos < 0)
+			return -EINVAL;
+
+		ft -> f_pos = tmp_pos;
+
+		return 0;
 }
 
 /*
@@ -463,7 +671,7 @@ do_stat(const char *path, struct stat *buf)
 	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
 
 	namev_ret = dir_namev(path, &namelen, &name, NULL, &dir);
-	if(namev_ret == ENOENT || namev_ret == ENOTDIR) return namev_ret;
+	if(namev_ret == -ENOENT || namev_ret == -ENOTDIR) return namev_ret;
 
 
 	lookup_ret = lookup(dir, name, namelen, &result);/* If dir has no lookup(), return -ENOTDIR. */
