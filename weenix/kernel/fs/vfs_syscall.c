@@ -44,18 +44,19 @@ do_read(int fd, void *buf, size_t nbytes)
         file_t *ft;
         int nb;
 
-        if(fd<-0 || fd >= NFILES) return -EBADF;
-        ft=fget(fd);
-        if((ft->f_mode&FMODE_READ) != FMODE_READ){
-                fput(fd);
-		return -EBADF;
+        KASSERT(fd != -1);
+        if( (ft = fget(fd)) == NULL)
+        	return -EBADF;
+        if( (ft -> f_mode & FMODE_READ) != FMODE_READ){
+            fput(fd);
+            return -EBADF;
 		}
         if(S_ISDIR(ft->f_vnode->vn_mode)){
-		fput(fd);
-		return -EISDIR;
+        	fput(fd);
+        	return -EISDIR;
 		}
-        nb=ft->f_vnode->vn_ops->read(ft->f_vnode, ft->f_pos, buf, nbytes);
-        ft->f_pos+=nb;
+        nb = ft -> f_vnode -> vn_ops -> read(ft -> f_vnode, ft -> f_pos, buf, nbytes);
+        ft -> f_pos += nb;
         fput(fd);
 
         return nb;
@@ -75,19 +76,20 @@ do_write(int fd, const void *buf, size_t nbytes)
         file_t *ft;
         int nb;
 
-        if(fd<0 || fd >= NFILES) return -EBADF;
-        ft=fget(fd);
-        if((ft->f_mode&FMODE_WRITE) != FMODE_WRITE){
+        KASSERT(fd != -1);
+        if( (ft = fget(fd)) == NULL)
+        	return -EBADF;
+        if( (ft -> f_mode & FMODE_WRITE) != FMODE_WRITE){
                 fput(fd);
-		return -EBADF;
+                return -EBADF;
 		}
-        if((ft->f_mode&FMODE_APPEND) == FMODE_APPEND){
-                ft->f_pos=do_lseek(fd, 0, SEEK_END);
+        if( (ft -> f_mode & FMODE_APPEND) == FMODE_APPEND){
+                ft -> f_pos = do_lseek(fd, 0, SEEK_END);
 		}
-        nb=ft->f_vnode->vn_ops->write(ft->f_vnode, ft->f_pos, buf, nbytes);
-        ft->f_pos+=nb;
-        fput(fd);
+        nb = ft -> f_vnode -> vn_ops -> write(ft -> f_vnode, ft -> f_pos, buf, nbytes);
+        ft -> f_pos += nb;
 
+        fput(fd);
         return nb;        
 }
 
@@ -103,9 +105,12 @@ do_close(int fd)
 {
         file_t *ft;
 
-        if(fd<0 || fd >= NFILES) return -EBADF;
-        ft=fget(fd);
+        KASSERT(fd != -1);
+        if( (ft = fget(fd)) == NULL)
+        	return -EBADF;
+
         fput(ft);
+
         curproc->p_files[fd]=NULL;
         return 0;
 }
@@ -130,18 +135,20 @@ int
 do_dup(int fd)
 {
 	file_t *ft;
-        int dupfd;
+	int dupfd;
 
-	if(fd<0 || fd >= NFILES) return -EBADF;
-        ft=fget(fd);
-        dupfd=get_empty_fd(curproc);
-        if(fupfd<0){
+    KASSERT(fd != -1);
+    if( (ft = fget(fd)) == NULL)
+    	return -EBADF;
+
+    dupfd = get_empty_fd(curproc);
+	if(dupfd < 0){
 		fput(ft);
-		return dupfd;/* return EMFILE */
-		} 
-	curproc->p_files[dupfd]=curproc->p_files[fd];
+		return dupfd;
+	}
+	curproc -> p_files[dupfd] = curproc -> p_files[fd];
         
-        return dupfd;
+    return dupfd;
 }
 
 /* Same as do_dup, but insted of using get_empty_fd() to get the new fd,
@@ -158,14 +165,23 @@ do_dup2(int ofd, int nfd)
 {
 	file_t *oft, *nft;
 
-	if(ofd<0 || ofd >= NFILES) return -EBADF;
-	if(nfd<0 || nfd >= NFILES) return -EBADF;
-        if(nfd==ofd) return nfd;
-        oft=fget(ofd);
-        if(curproc->p_files[nfd]) do_close(nfd);
+    KASSERT(ofd != -1);
+    if( (nft = fget(ofd)) == NULL)
+    	return -EBADF;
+
+    if(nfd == ofd){
+    	fput(nft);
+    	return nfd;
+    }
+
+    if(nfd < 0 || nfd >= NFILES)
+    	return -EBADF;
+
+    if(curproc->p_files[nfd] != NULL)
+    	do_close(nfd);
 	curproc->p_files[nfd]=curproc->p_files[ofd];
         
-        return nfd;
+    return nfd;
 }
 
 /*
@@ -199,20 +215,27 @@ do_mknod(const char *path, int mode, unsigned devid)
 	size_t namelen;
 	const char *name;
 	vnode_t *dir, *result;
+	int namev_ret, lookup_ret, ret;
 
 	if(!S_IFCHR(mode) && !S_IFBLK(mode)) return -EINVAL;/* Q: not sure !S_IFCHR(mode) or S_IFCHR!=mode? */
 	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
 
-	dir_namev(path, &namelen, &name, NULL, &dir);
+	namev_ret = dir_namev(path, &namelen, &name, NULL, &dir);
+	if(namev_ret == -ENOENT || namev_ret == -ENOTDIR) return namev_ret;
+
+
+	lookup_ret = lookup(dir, name, namelen, &result);/* If dir has no lookup(), return -ENOTDIR. */
 	vput(dir);
-	ret=lookup(dir, name, namelen, &result);/* If dir has no lookup(), return -ENOTDIR. */
-	if(ret==0){
+	if(lookup_ret == -ENOTDIR) return lookup_ret;
+	if(lookup_ret == 0){
 		vput(result);
 		return -EEXIST;        
-		}
-	ret=result->vn_ops->mknod(result, name, namelen, mode, devid);
+	}
 
-	return ret;	
+	ret = result -> vn_ops -> mknod(result, name, namelen, mode, devid);
+	vput(result);
+
+	return ret;
 }
 
 /* Use dir_namev() to find the vnode of the dir we want to make the new
@@ -377,8 +400,33 @@ do_getdent(int fd, struct dirent *dirp)
 int
 do_lseek(int fd, int offset, int whence)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_lseek");
-        return -1;
+		file_t *ft;
+		off_t tmp_pos;
+
+		KASSERT(fd != -1);
+		if( (ft = fget(fd)) == NULL)
+			return -EBADF;
+
+		switch(whence){
+			case SEEK_SET:
+				tmp_pos = offset;
+				break;
+			case SEEK_CUR:
+				tmp_pos += offset;
+				break;
+			case SEEK_END:
+				tmp_pos = ft->f_vnode->vn_len + offset;
+				break;
+			default:
+				return -EINVAL;
+				break;
+		}
+		if(tmp_pos < 0)
+			return -EINVAL;
+
+		ft -> f_pos = tmp_pos;
+
+		return 0;
 }
 
 /*
@@ -403,7 +451,7 @@ do_stat(const char *path, struct stat *buf)
 	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
 
 	namev_ret = dir_namev(path, &namelen, &name, NULL, &dir);
-	if(namev_ret == ENOENT || namev_ret == ENOTDIR) return namev_ret;
+	if(namev_ret == -ENOENT || namev_ret == -ENOTDIR) return namev_ret;
 
 
 	lookup_ret = lookup(dir, name, namelen, &result);/* If dir has no lookup(), return -ENOTDIR. */
