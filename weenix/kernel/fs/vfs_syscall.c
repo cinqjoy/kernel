@@ -134,7 +134,7 @@ do_dup(int fd)
 	if(fd<0 || fd >= NFILES) return -EBADF;
         ft=fget(fd);
         dupfd=get_empty_fd(curproc);
-        if(fupfd<0){
+        if(dupfd<0){
 		fput(ft);
 		return dupfd;
 		} 
@@ -317,8 +317,11 @@ do_link(const char *from, const char *to)
 int
 do_rename(const char *oldname, const char *newname)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_rename");
-        return -1;
+	int identifier;       
+	do_link(oldname,newname);
+	identifier = do_unlink(oldname);
+	/*NOT_YET_IMPLEMENTED("VFS: do_rename");*/
+        return identifier;
 }
 
 /* Make the named directory the current process's cwd (current working
@@ -337,8 +340,45 @@ do_rename(const char *oldname, const char *newname)
 int
 do_chdir(const char *path)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_chdir");
-        return -1;
+	struct vnode *res_vnode,*cur_vnode;
+	struct vnode *p_cwd = curproc->p_cwd;
+	size_t namelen;
+	char *name;
+	/* res_vnode_ref = n , cur_vnode_ref = k */ 
+	if(strlen(path) > MAXPATHLEN){
+		return -ENAMETOOLONG;
+	}
+
+	dir_namev( p_cwd, &namelen , &name,NULL , &res_vnode); 
+ 	
+	if(lookup(res_vnode,name,namelen,&cur_vnode)){
+		return -ENOENT;
+	}
+	
+	if(S_ISDIR(cur_vnode->vn_mode)){
+		/* res_vnode_ref = n+1 , cur_vnode_ref = k+1 */
+		vput(res_vnode);
+		vput(cur_vnode);
+		/* res_vnode_ref = n , cur_vnode_ref = k */
+	}else{
+		return -ENOTDIR;
+	}
+
+	curproc->p_cwd = path;
+	//vput(res_vnode);
+        vput(cur_vnode);
+        /* res_vnode_ref = n , cur_vnode_ref = k-1 */	
+	
+	/*(new) res_vnode_ref = n , cur_vnode_ref = k */
+	dir_namev( path, &namelen , &name,NULL , &res_vnode);
+	lookup(path,&namelen, &name, NULL, &res_vnode);
+	/* res_vnode_ref = n+1 , cur_vnode_ref = k+1 */
+	vput(res_vnode);
+	/* res_vnode_ref = n, cur_vnode_ref = k+1 */
+	
+	/*NOT_YET_IMPLEMENTED("VFS: do_chdir");*/
+        /*return -1;*/
+	return 0;
 }
 
 /* Call the readdir f_op on the given fd, filling in the given dirent_t*.
@@ -359,8 +399,29 @@ do_chdir(const char *path)
 int
 do_getdent(int fd, struct dirent *dirp)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_getdent");
-        return -1;
+	file_t *ft;
+	int offset;
+	if(fd<0 || fd >= NFILES) return -EBADF;
+	ft = fget(fd);
+	if(!S_ISIDR(ft->f_vnode->vn_mode))
+		return -ENOTDIR;
+	
+	vref(ft->f_vnode);
+	offset = ft->f_vnode->vn_ops->readdir(ft->f_vnode,ft->f_vnode->vn_len,dirp);	
+
+	ft->f_pos += offset;
+	fput(fd);
+	//vput(ft->f_vnode);
+	if(offset==0){
+		return 0;
+	}else if(offset==sizeof(dirent_t)){
+		return offset;
+	}else{
+		return -errno;
+	}
+	/*NOT_YET_IMPLEMENTED("VFS: do_getdent");*/
+        /*return -1;*/
+	
 }
 
 /*
