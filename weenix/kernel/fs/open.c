@@ -116,12 +116,15 @@ do_open(const char *filename, int oflags)
 		fput(ft);
 		return err;/* return -ENOENT */
 		}
-	else if(S_ISCHR(res_vnode->vn_mode) || S_ISBLK(res_vnode->vn_mode)){
-		if(){
-			vput(res_vnode);
-			fput(ft);
-			return -ENXIO;
-			}
+	if(S_ISCHR(res_vnode->vn_mode) && !bytedev_lookup(res_vnode->vn_devid)){
+		vput(res_vnode);
+		fput(ft);
+		return -ENXIO;
+		}
+	if(S_ISBLK(res_vnode->vn_mode) && !blockdev_lookup(res_vnode->vn_devid)){
+		vput(res_vnode);
+		fput(ft);
+		return -ENXIO;
 		}
 
 	ft->f_vnode=res_vnode;   
