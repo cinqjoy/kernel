@@ -37,6 +37,12 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
         	*result = dir;
         	return 0;
         }
+        if (len > NAME_LEN)
+		{
+			return -ENAMETOOLONG;
+		}
+
+
         return dir->vn_ops->lookup(dir,name,len,result);
 }
 
@@ -100,6 +106,10 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 
 		while(nametail_ptr != tail_ptr){
 			len = nametail_ptr - namehead_ptr;
+        	if (len > NAME_LEN)
+			{
+				return -ENAMETOOLONG;
+			}
 			KASSERT(NULL != base_dir);
 			ret = lookup(base_dir, namehead_ptr, len, &tmp_vnode);
 			if(ret != 0){
@@ -115,6 +125,10 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 				vput(base_dir);
 			}
 			base_dir = tmp_vnode;
+		}
+		if(!S_ISDIR(base_dir->vn_mode)){
+			vput(base_dir);
+			return -ENOTDIR;
 		}
 		len = nametail_ptr - namehead_ptr;
 		*res_vnode = base_dir;

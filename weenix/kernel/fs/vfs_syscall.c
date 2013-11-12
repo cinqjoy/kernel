@@ -273,6 +273,12 @@ do_mkdir(const char *path)
 	if (ret == -ENOENT ||  ret == -ENOTDIR )
 			return ret;
 
+	if (strlen(name) > NAME_LEN)
+	{
+		vput(dir);
+		return -ENAMETOOLONG;
+	}
+
 	lookupret=lookup(dir, name, namelen, &result);
 
 	/*if (lookupret == -ENOENT ||  lookupret == -ENOTDIR )*/
