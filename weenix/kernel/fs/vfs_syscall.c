@@ -77,7 +77,7 @@ do_write(int fd, const void *buf, size_t nbytes)
         int nb;
 
         KASSERT(fd != -1);
-        if( (ft = fget(ft)) == NULL)
+        if( (ft = fget(fd)) == NULL)
         	return -EBADF;
         if( (ft -> f_mode & FMODE_WRITE) != FMODE_WRITE){
                 fput(ft);
@@ -217,7 +217,7 @@ do_mknod(const char *path, int mode, unsigned devid)
 	vnode_t *dir, *result;
 	int namev_ret, lookup_ret, ret;
 
-	if(!S_IFCHR(mode) && !S_IFBLK(mode)) return -EINVAL;
+	if(!S_ISCHR(mode) && !S_ISBLK(mode)) return -EINVAL;
 	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
 
 	namev_ret = dir_namev(path, &namelen, &name, NULL, &dir);
@@ -279,7 +279,7 @@ do_mkdir(const char *path)
 			return lookupret;
 	}
 
-	if (lookupret == 0){ // exsit
+	if (lookupret == 0){  /*exsit*/
 			vput(result);
 		vput(dir);
 		return -EEXIST;
@@ -438,8 +438,8 @@ do_link(const char *from, const char *to)
 
   /* diffeernt order from dir_namev */
   /* call open_namev */
-	//ret = open_namev(from, O_CREAT || O_RDWR , &fromv, NULL);
-ret = open_namev(from, O_WRONLY , &fromv, NULL);
+	/*ret = open_namev(from, O_CREAT || O_RDWR , &fromv, NULL);*/
+	ret = open_namev(from, O_WRONLY , &fromv, NULL);
 
 
 	if (ret == -ENOENT ||  ret == -ENOTDIR  )
@@ -586,7 +586,7 @@ do_getdent(int fd, struct dirent *dirp)
 	offset = ft->f_vnode->vn_ops->readdir(ft->f_vnode,ft->f_vnode->vn_len,dirp);	
 
 	ft->f_pos += offset;
-	fput(fd);
+	fput(ft);
 	//vput(ft->f_vnode);
 	if(offset==0){
 		return 0;
