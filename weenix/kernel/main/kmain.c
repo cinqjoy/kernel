@@ -193,6 +193,8 @@ idleproc_run(int arg1, void *arg2)
 	curproc->p_cwd=vfs_root_vn;
 	proc_t *init=proc_lookup(1);
 	init->p_cwd=vfs_root_vn;
+	vref(vfs_root_vn);
+	vref(vfs_root_vn);
 
         /* Here you need to make the null, zero, and tty devices using mknod */
         /* You can't do this until you have VFS, check the include/drivers/dev.h
