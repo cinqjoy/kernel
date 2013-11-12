@@ -201,7 +201,7 @@ idleproc_run(int arg1, void *arg2)
 	do_mknod("/dev/zero", S_IFCHR, MEM_ZERO_DEVID);
 	char c[10];
 	int i;
-	for(i=0; i<NTERMS; i++){
+	for(i=0; i<vt_num_terminals(); i++){
 		sprintf(c,"/dev/tty%d",i);
 		do_mknod(c, S_IFCHR, MKDEVID(2,i));
 		}
