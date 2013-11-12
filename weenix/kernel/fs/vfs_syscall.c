@@ -269,35 +269,32 @@ do_mkdir(const char *path)
 
 	ret = dir_namev(path, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
 
+	if (ret != 0 )
+		return ret;
 
-	if (ret == -ENOENT ||  ret == -ENOTDIR )
-			return ret;
-
-	if (strlen(name) > NAME_LEN)
-	{
-		vput(dir);
-		return -ENAMETOOLONG;
-	}
 
 	lookupret=lookup(dir, name, namelen, &result);
 
-	/*if (lookupret == -ENOENT ||  lookupret == -ENOTDIR )*/
-	if (lookupret == -ENOTDIR )
-	{
-			vput(dir);
-			return lookupret;
-	}
 
-	if (lookupret == 0){  /*exsit*/
-			vput(result);
+	/*-------------------*/
+	if (lookupret == -ENOENT)
+	{
+		KASSERT(NULL != dir->vn_ops->mkdir);
+		ret=dir->vn_ops->mkdir(dir, name, namelen);
+		vput(dir);
+		return ret;
+	}
+	else if (lookupret == 0){  /*exsit*/
+		vput(result);
 		vput(dir);
 		return -EEXIST;
 	}
-	KASSERT(NULL != dir->vn_ops->mkdir);
-	ret=dir->vn_ops->mkdir(dir, name, namelen);
-	vput(dir);
+	else
+	{
+		vput(dir);
+		return lookupret;
+	}
 
-	return ret;
 }
 
 /* Use dir_namev() to find the vnode of the directory containing the dir to be
@@ -337,7 +334,7 @@ do_rmdir(const char *path)
 
 	ret  = dir_namev(path, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
 
-	if (ret == -ENOENT ||  ret == -ENOTDIR )
+	if (ret !=0 )
 			return ret;
 
 	KASSERT(NULL != dir->vn_ops->rmdir);
@@ -381,13 +378,13 @@ do_unlink(const char *path)
 
 	ret  = dir_namev(path, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
 
-	if (ret == -ENOENT ||  ret == -ENOTDIR )
+	if (ret !=0 )
 			return ret;
 
 	/* cannot call rmdir since no dir will return */
 	lookupret=lookup(dir, name, namelen, &result);
 
-	if (lookupret == -ENOENT || ret == -ENOTDIR )
+	if (lookupret !=0 )
 	{
 			vput(dir);
 			return lookupret;
@@ -452,7 +449,7 @@ do_link(const char *from, const char *to)
 	ret = open_namev(from, O_WRONLY , &fromv, NULL);
 
 
-	if (ret == -ENOENT ||  ret == -ENOTDIR  )
+	if (ret !=0  )
 			return ret;
 	/* assume old path must exists according to linux spec*/
 
@@ -460,7 +457,7 @@ do_link(const char *from, const char *to)
 
 	ret = dir_namev(to, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
 
-	if (ret == -ENOENT ||  ret == -ENOTDIR )
+	if (ret !=0 )
 	{
 			vput(fromv);
 			return ret;
@@ -468,28 +465,27 @@ do_link(const char *from, const char *to)
 
 	lookupret=lookup(dir, name, namelen, &result);/* If dir has no lookup(), return -ENOTDIR. */
 
-	if (lookupret == -ENOTDIR)
+	/*--------------------------*/
+	if (lookupret == -ENOENT)
 	{
+		ret=dir->vn_ops->link(fromv, dir, name, namelen);
 		vput(fromv);
 		vput(dir);
-		return lookupret;
+		return ret;
 	}
-
-	if (lookupret == 0) /* exist */
+	else if (lookupret == 0) /* exist */
 	{
 		vput(fromv);
 		vput(dir);
 		vput(result);
 		return -EEXIST;
 	}
-
-
-	ret=dir->vn_ops->link(fromv, dir, name, namelen);
-
-	vput(fromv);
-	vput(dir);
-
-	return ret;
+	else
+	{
+		vput(fromv);
+		vput(dir);
+		return lookupret;
+	}
 }
 
 /*      o link newname to oldname

@@ -28,6 +28,11 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 		KASSERT(NULL != dir);
 		KASSERT(NULL != name);
 		KASSERT(NULL != result);
+        if (len > NAME_LEN)
+		{
+			return -ENAMETOOLONG;
+		}
+
         if(dir->vn_ops->lookup == NULL||(!S_ISDIR(dir->vn_mode)))
         	return -ENOTDIR;
 
@@ -37,11 +42,6 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
         	*result = dir;
         	return 0;
         }
-        if (len > NAME_LEN)
-		{
-			return -ENAMETOOLONG;
-		}
-
 
         return dir->vn_ops->lookup(dir,name,len,result);
 }
@@ -79,6 +79,9 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 		vnode_t *tmp_vnode;
 		int ret, len;
 
+		if (strlen(pathname)> MAXPATHLEN) 
+			return -ENAMETOOLONG;
+
 		if(base == NULL) base_dir = curproc->p_cwd;
 		else base_dir = base;
 
@@ -106,10 +109,6 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 
 		while(nametail_ptr != tail_ptr){
 			len = nametail_ptr - namehead_ptr;
-        	if (len > NAME_LEN)
-			{
-				return -ENAMETOOLONG;
-			}
 			KASSERT(NULL != base_dir);
 			ret = lookup(base_dir, namehead_ptr, len, &tmp_vnode);
 			if(ret != 0){
