@@ -520,7 +520,7 @@ do_chdir(const char *path)
 	struct vnode *p_cwd = curproc->p_cwd;
 	size_t namelen;
 	int lookup_stat, dir_stat;
-	char *name;
+	const char *name;
 	/* res_vnode_ref = n , cur_vnode_ref = k */ 
 	if(strlen(path) > MAXPATHLEN){
 		return -ENAMETOOLONG;
