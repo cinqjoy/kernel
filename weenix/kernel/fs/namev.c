@@ -25,8 +25,15 @@
 int
 lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 {
-        if(dir->vn_ops->lookup == NULL)
+        if(dir->vn_ops->lookup == NULL||(!S_ISDIR(dir->vn_mode)))
         	return -ENOTDIR;
+
+
+        if(strcmp(name,".")==0||len == 0){
+        	vref(dir);
+        	*result = dir;
+        	return 0;
+        }
         return dir->vn_ops->lookup(dir,name,len,result);
 }
 
