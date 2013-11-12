@@ -538,8 +538,10 @@ do_chdir(const char *path)
 	vput(res_vnode);
 	
 	if(S_ISDIR(cur_vnode->vn_mode)){
+		vput(curproc->p_cwd);
 		curproc->p_cwd = cur_vnode;
 	}else{
+		vput(cur_vnode);
 		return -ENOTDIR;
 	}
 	return 0;
