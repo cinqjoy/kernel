@@ -101,6 +101,10 @@ do_open(const char *filename, int oflags)
 			return -EINVAL;
 		}
 	if(flag&O_APPEND) ft->f_mode|=FMODE_APPEND;
+	if(flag&O_TRUNC && !(accmode&O_RDONLY)){
+		ft->f_pos=0;
+		ft->f_vnode->vn_len=0;
+		}
 
 	if(strlen(filename) > MAXPATHLEN){ 
 		fput(ft);
