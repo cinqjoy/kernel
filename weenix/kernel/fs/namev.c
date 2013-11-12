@@ -146,7 +146,7 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 
 	lookup_ret = lookup(dir, name, namelen, res_vnode);
 
-	if(lookup_ret != 0 && ((flag || ~O_CREAT) == 0xfff)){
+	if(lookup_ret != 0 && ((flag | (~(uint32_t)O_CREAT)) == 0xffffffff)){
 		KASSERT(NULL != dir->vn_ops->create);
 		create_ret = dir->vn_ops->create(dir,name,namelen,res_vnode);
 		vput(dir);
