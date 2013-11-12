@@ -93,17 +93,19 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 		while(nametail_ptr != tail_ptr){
 			len = nametail_ptr - namehead_ptr;
 			ret = lookup(base_dir, namehead_ptr, len, &tmp_vnode);
+			if(ret != 0){
+				vput(base_dir);
+				return ret;
+			}
 
 			if(tail_ptr > nametail_ptr)
 				namehead_ptr = ++nametail_ptr;
 			while(*nametail_ptr != '/' && tail_ptr > nametail_ptr)
 				nametail_ptr++;
-			base_dir = tmp_vnode;
 			if(nametail_ptr != tail_ptr){
-				if(ret != 0)
-					return ret;
 				vput(base_dir);
 			}
+			base_dir = tmp_vnode;
 		}
 		len = nametail_ptr - namehead_ptr;
 		*res_vnode = base_dir;
