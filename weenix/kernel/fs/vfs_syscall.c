@@ -526,41 +526,29 @@ do_chdir(const char *path)
 	struct vnode *res_vnode,*cur_vnode;
 	struct vnode *p_cwd = curproc->p_cwd;
 	size_t namelen;
+	int lookup_stat, dir_stat;
 	char *name;
 	/* res_vnode_ref = n , cur_vnode_ref = k */ 
 	if(strlen(path) > MAXPATHLEN){
 		return -ENAMETOOLONG;
 	}
 
-	dir_namev( p_cwd, &namelen , &name,NULL , &res_vnode); 
+	if((dir_stat=dir_namev( path, &namelen , &name,NULL , &res_vnode))){
+		return dir_stat;
+	} 
  	
-	if(lookup(res_vnode,name,namelen,&cur_vnode)){
-		return -ENOENT;
+	if((lookup_stat=lookup(res_vnode,name,namelen,&cur_vnode))){
+		vput(res_vnode);
+		return lookup_stat;
 	}
 	
+	vput(res_vnode);
+	
 	if(S_ISDIR(cur_vnode->vn_mode)){
-		/* res_vnode_ref = n+1 , cur_vnode_ref = k+1 */
-		vput(res_vnode);
-		vput(cur_vnode);
-		/* res_vnode_ref = n , cur_vnode_ref = k */
+		curproc->p_cwd = cur_vnode;
 	}else{
 		return -ENOTDIR;
 	}
-
-	curproc->p_cwd = path;
-	//vput(res_vnode);
-        vput(cur_vnode);
-        /* res_vnode_ref = n , cur_vnode_ref = k-1 */	
-	
-	/*(new) res_vnode_ref = n , cur_vnode_ref = k */
-	dir_namev( path, &namelen , &name,NULL , &res_vnode);
-	lookup(path,&namelen, &name, NULL, &res_vnode);
-	/* res_vnode_ref = n+1 , cur_vnode_ref = k+1 */
-	vput(res_vnode);
-	/* res_vnode_ref = n, cur_vnode_ref = k+1 */
-	
-	/*NOT_YET_IMPLEMENTED("VFS: do_chdir");*/
-        /*return -1;*/
 	return 0;
 }
 
