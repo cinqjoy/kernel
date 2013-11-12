@@ -190,7 +190,7 @@ idleproc_run(int arg1, void *arg2)
 #ifdef __VFS__
         /* Once you have VFS remember to set the current working directory
          * of the idle and init processes */
-	curporc->p_cwd=vfs_root_vn;
+	curproc->p_cwd=vfs_root_vn;
 	proc_t *init=proc_lookup(1);
 	init->p_cwd=vfs_root_vn;
 
@@ -200,7 +200,8 @@ idleproc_run(int arg1, void *arg2)
 	do_mknod("/dev/null", S_IFCHR, MEM_NULL_DEVID);
 	do_mknod("/dev/zero", S_IFCHR, MEM_ZERO_DEVID);
 	char c[10];
-	for(int i=0; i<NTERMS; i++){
+	int i;
+	for(i=0; i<NTERMS; i++){
 		sprintf(c,"/dev/tty%d",i);
 		do_mknod(c, S_IFCHR, MKDEVID(2,i));
 		}
