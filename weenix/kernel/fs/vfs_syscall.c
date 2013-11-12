@@ -84,9 +84,12 @@ do_write(int fd, const void *buf, size_t nbytes)
                 return -EBADF;
 		}
         if( (ft -> f_mode & FMODE_APPEND) == FMODE_APPEND){
-                ft -> f_pos = do_lseek(fd, 0, SEEK_END);
+                ft -> f_pos = do_lseek(fd, 0, SEEK_END);/* err */
 		}
         nb = ft -> f_vnode -> vn_ops -> write(ft -> f_vnode, ft -> f_pos, buf, nbytes);
+
+        if(nb>=0)
+        	KASSERT((S_ISCHR(ft->f_vnode->vn_mode)) || (S_ISBLK(ft->f_vnode->vn_mode)) || ((S_ISREG(ft->f_vnode->vn_mode)) && (ft->f_pos <= ft->f_vnode->vn_len)));
         ft -> f_pos += nb;
 
         fput(ft);
@@ -233,7 +236,7 @@ do_mknod(const char *path, int mode, unsigned devid)
 		vput(result);
 		return -EEXIST;        
 	}
-	
+	KASSERT(NULL != dir->vn_ops->mknod);
 	ret = dir -> vn_ops -> mknod(dir, name, namelen, mode, devid);
 	vput(dir);
 
@@ -284,7 +287,7 @@ do_mkdir(const char *path)
 		vput(dir);
 		return -EEXIST;
 	}
-
+	KASSERT(NULL != dir->vn_ops->mkdir);
 	ret=dir->vn_ops->mkdir(dir, name, namelen);
 	vput(dir);
 
@@ -331,7 +334,7 @@ do_rmdir(const char *path)
 	if (ret == -ENOENT ||  ret == -ENOTDIR )
 			return ret;
 
-
+	KASSERT(NULL != dir->vn_ops->rmdir);
 	/* no need to check if child is directory, done by PFS		*/
 	ret=dir->vn_ops->rmdir(dir, name, namelen);
 
@@ -392,6 +395,7 @@ do_unlink(const char *path)
 	}
 
 	vput(result);
+	KASSERT(NULL != dir->vn_ops->unlink);
 	/* kassert checking non dir in unlink */
 	ret=dir->vn_ops->unlink(dir, name, namelen);
 
@@ -661,7 +665,7 @@ do_stat(const char *path, struct stat *buf)
 	lookup_ret = lookup(dir, name, namelen, &result);/* If dir has no lookup(), return -ENOTDIR. */
 	vput(dir);
 	if(lookup_ret == -ENOTDIR) return lookup_ret;
-
+	KASSERT(result->vn_ops->stat);
 	ret = result->vn_ops->stat(result, buf);
 	vput(result);
 
