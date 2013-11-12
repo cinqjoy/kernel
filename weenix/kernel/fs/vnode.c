@@ -436,7 +436,7 @@ special_file_read(vnode_t *file, off_t offset, void *buf, size_t count)
 {
 		if (S_ISBLK(file->vn_mode))
 			return -ENOTSUP;
-		//else if(S_ISCHR(file->vn_mode))
+		/*else if(S_ISCHR(file->vn_mode))*/
 			return file->vn_cdev->cd_ops->read(file->vn_cdev, offset, buf, count);
 }
 
@@ -451,7 +451,7 @@ special_file_write(vnode_t *file, off_t offset, const void *buf, size_t count)
 {
 		if (S_ISBLK(file->vn_mode))
 			return -ENOTSUP;
-		//else if(S_ISCHR(file->vn_mode))
+		/*else if(S_ISCHR(file->vn_mode))*/
 			return file->vn_cdev->cd_ops->write(file->vn_cdev, offset, buf, count);
 }
 
