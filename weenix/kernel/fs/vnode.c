@@ -435,12 +435,14 @@ static int
 special_file_read(vnode_t *file, off_t offset, void *buf, size_t count)
 {
 		KASSERT(file);
+		dbg(DBG_PRINT, "(GRADING2A 1.a) File exists.\n");
 		KASSERT((S_ISCHR(file->vn_mode) || S_ISBLK(file->vn_mode)));
+		dbg(DBG_PRINT, "(GRADING2A 1.a) File refers to a special file.\n");
 		if (S_ISBLK(file->vn_mode))
 			return -ENOTSUP;
 		else{
 		    KASSERT(file->vn_cdev && file->vn_cdev->cd_ops && file->vn_cdev->cd_ops->write);
-		    dbg(DBG_PRINT, "(GRADING2A 1.a) Read from a byte device.");
+		    dbg(DBG_PRINT, "(GRADING2A 1.a) Read from a byte device.\n");
 			return file->vn_cdev->cd_ops->read(file->vn_cdev, offset, buf, count);
 		}
 }
@@ -455,12 +457,14 @@ static int
 special_file_write(vnode_t *file, off_t offset, const void *buf, size_t count)
 {
 		KASSERT(file);
+		dbg(DBG_PRINT, "(GRADING2A 1.a) File exists.\n");
 		KASSERT((S_ISCHR(file->vn_mode) || S_ISBLK(file->vn_mode)));
+		dbg(DBG_PRINT, "(GRADING2A 1.a) File refers to a special file.\n");
 		if (S_ISBLK(file->vn_mode))
 			return -ENOTSUP;
 		else{
 		    KASSERT(file->vn_cdev && file->vn_cdev->cd_ops && file->vn_cdev->cd_ops->write);
-		    dbg(DBG_PRINT, "(GRADING2A 1.b) Write to a byte device.");
+		    dbg(DBG_PRINT, "(GRADING2A 1.b) Write to a byte device.\n");
 			return file->vn_cdev->cd_ops->write(file->vn_cdev, offset, buf, count);
 		}
 }

@@ -78,14 +78,21 @@ do_open(const char *filename, int oflags)
 	vnode_t *res_vnode;
 
 	fd=get_empty_fd(curproc);
-	if(fd<0) return fd;/* return -EMFILE */
+	if(fd<0){
+		dbg(DBG_PRINT, "ERROR(Filename=%s): Current process(pid=%d) already has the maximum number of files open.\n", filename, curproc->p_pid);
+		return fd;/* return -EMFILE */
+	}
 
 	ft=fget(-1);
-	if(!ft) return -ENOMEM;
+	if(!ft){
+		dbg(DBG_PRINT, "ERROR(Filename=%s): Insufficient kernel memory was available.\n", filename);
+		return -ENOMEM;
+	}
 	else curproc->p_files[fd]=ft;
 
 	accmode=oflags&0x00F;
 	flag=oflags&0xF00;
+
 	switch(accmode){
 		case O_RDONLY: 
 			ft->f_mode=FMODE_READ;
@@ -98,8 +105,10 @@ do_open(const char *filename, int oflags)
 			break;
 		default:
 			fput(ft);
+			dbg(DBG_PRINT, "ERROR(Filename=%s): Oflags is not valid.", filename);
 			return -EINVAL;
 		}
+
 	if(flag&O_APPEND) ft->f_mode|=FMODE_APPEND;
 	if(flag&O_TRUNC && !(accmode&O_RDONLY)){
 		ft->f_pos=0;
@@ -108,31 +117,36 @@ do_open(const char *filename, int oflags)
 
 	if(strlen(filename) > MAXPATHLEN){ 
 		fput(ft);
+		dbg(DBG_PRINT, "ERROR(Filename=%s): A component of filename(%s) was too long.\n", filename);
 		return -ENAMETOOLONG;
 		}
 	if(!(accmode&O_RDONLY) && S_ISDIR(accmode)){
 		fput(ft);
+		dbg(DBG_PRINT, "ERROR(Filename=%s): Pathname refers to a directory and the access requested involved writing.\n", filename);
 		return -EISDIR;
 		}
 
 	err=open_namev(filename, flag, &res_vnode, NULL);
 	if(err<0){
 		fput(ft);
+		dbg(DBG_PRINT, "ERROR(Filename=%s): The file a directory component in pathname does not exist.\n", filename);
 		return err;/* return -ENOENT */
 		}
 	if(S_ISCHR(res_vnode->vn_mode) && !bytedev_lookup(res_vnode->vn_devid)){
 		vput(res_vnode);
 		fput(ft);
+		dbg(DBG_PRINT, "ERROR(Filename=%s): Pathname refers to a character special file and no corresponding device(id=%d) exists.\n", filename, res_vnode->vn_devid);
 		return -ENXIO;
 		}
 	if(S_ISBLK(res_vnode->vn_mode) && !blockdev_lookup(res_vnode->vn_devid)){
 		vput(res_vnode);
 		fput(ft);
+		dbg(DBG_PRINT, "ERROR(Filename=%s): Pathname refers to a block special file and no corresponding device(id=%d) exists.\n", filename,res_vnode->vn_devid);
 		return -ENXIO;
 		}
 
 	ft->f_vnode=res_vnode;   
-	ft->f_pos=0;/* ===== NOT SURE ===== */
+	ft->f_pos=0;
 
-        return fd;	
+	return fd;
 }
