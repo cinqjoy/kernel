@@ -25,6 +25,9 @@
 int
 lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 {
+		KASSERT(NULL != dir);
+		KASSERT(NULL != name);
+		KASSERT(NULL != result);
         if(dir->vn_ops->lookup == NULL||(!S_ISDIR(dir->vn_mode)))
         	return -ENOTDIR;
 
@@ -60,6 +63,11 @@ int
 dir_namev(const char *pathname, size_t *namelen, const char **name,
           vnode_t *base, vnode_t **res_vnode)
 {
+		KASSERT(NULL != pathname);
+		KASSERT(NULL != namelen);
+		KASSERT(NULL != name);
+		KASSERT(NULL != res_vnode);
+
 		char *namehead_ptr, *nametail_ptr, *tail_ptr;
 		vnode_t *base_dir;
 		vnode_t *tmp_vnode;
@@ -92,6 +100,7 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 
 		while(nametail_ptr != tail_ptr){
 			len = nametail_ptr - namehead_ptr;
+			KASSERT(NULL != base_dir);
 			ret = lookup(base_dir, namehead_ptr, len, &tmp_vnode);
 
 			if(tail_ptr > nametail_ptr)
@@ -136,6 +145,7 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 	lookup_ret = lookup(dir, name, namelen, res_vnode);
 
 	if(lookup_ret != 0 && ((flag || ~O_CREAT) == 0xfff)){
+		KASSERT(NULL != dir->vn_ops->create);
 		create_ret = dir->vn_ops->create(dir,name,namelen,res_vnode);
 		vput(dir);
 		return create_ret;
