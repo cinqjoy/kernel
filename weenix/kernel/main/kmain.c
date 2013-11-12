@@ -201,13 +201,16 @@ idleproc_run(int arg1, void *arg2)
          * file for macros with the device ID's you will need to pass to mknod */
 	do_mkdir("/dev");
 	do_mknod("/dev/null", S_IFCHR, MEM_NULL_DEVID);
+	dbg(DBG_PRINT, "Successfully created the null device.\n");
 	do_mknod("/dev/zero", S_IFCHR, MEM_ZERO_DEVID);
+	dbg(DBG_PRINT, "Successfully created the zero device.\n");
 	char c[10];
 	int i;
 	for(i=0; i<vt_num_terminals(); i++){
 		sprintf(c,"/dev/tty%d",i);
 		do_mknod(c, S_IFCHR, MKDEVID(2,i));
 		}
+	dbg(DBG_PRINT, "Successfully created %d TTY devices.\n", vt_num_terminals());
 #endif
 
         /* Finally, enable interrupts (we want to make sure interrupts

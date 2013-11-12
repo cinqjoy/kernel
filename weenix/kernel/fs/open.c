@@ -148,5 +148,6 @@ do_open(const char *filename, int oflags)
 	ft->f_vnode=res_vnode;   
 	ft->f_pos=0;
 
+	dbg(DBG_PRINT, "Successfully opened the file \"%s\".\n", filename);
 	return fd;
 }
