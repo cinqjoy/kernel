@@ -199,6 +199,7 @@ idleproc_run(int arg1, void *arg2)
         /* Here you need to make the null, zero, and tty devices using mknod */
         /* You can't do this until you have VFS, check the include/drivers/dev.h
          * file for macros with the device ID's you will need to pass to mknod */
+	do_mkdir("/dev");
 	do_mknod("/dev/null", S_IFCHR, MEM_NULL_DEVID);
 	do_mknod("/dev/zero", S_IFCHR, MEM_ZERO_DEVID);
 	char c[10];
@@ -288,7 +289,7 @@ initproc_run(int arg1, void *arg2)
         kshell_add_command("shtest",(kshell_cmd_func_t)sunghan_test,"sunghan's tests");
         kshell_add_command("dltest",(kshell_cmd_func_t)sunghan_deadlock_test,"sunghan's deadlock tests");
 	kshell_add_command("vfstest",(kshell_cmd_func_t)vfstest_main,"vfs 506 tests");
-        kshell_t *kshell = kshell_create(0);
+        kshell_t *kshell = kshell_create(MKDEVID(2, 0));
         if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
         while (kshell_execute_next(kshell));
         kshell_destroy(kshell);
