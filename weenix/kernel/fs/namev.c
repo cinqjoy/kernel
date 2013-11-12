@@ -53,38 +53,55 @@ int
 dir_namev(const char *pathname, size_t *namelen, const char **name,
           vnode_t *base, vnode_t **res_vnode)
 {
-		char *tok;
+		char *namehead_ptr, *nametail_ptr, *tail_ptr;
 		vnode_t *base_dir;
 		vnode_t *tmp_vnode;
-		int ret;
+		int ret, len;
 
 		if(base == NULL) base_dir = curproc->p_cwd;
 		else base_dir = base;
 
-		if(pathname[0] == '/')
-			base_dir = vfs_root_vn;
-
-		char *last_tok;
-		tok = strtok(pathname,"/");
-		while(tok != NULL){
-				ret = lookup(base_dir, tok, strlen(tok), &tmp_vnode);
-				last_tok = tok;
-				tok = strtok(NULL,"/");
-
-				if(tok != NULL && ret != 0)	return ret;
-				if(tok != NULL){ //except last token
-					base_dir = tmp_vnode;
-					vput(base_dir);
-				}
+		if(strlen(pathname) == 0){
+			*name = pathname;
+			*namelen = 0;
+			*res_vnode = base;
+			return 0;
 		}
-		/*
-		 * Only check the pathname
-		 * Ex: A/B/C
-		 * 	   This function will not check C's availability.
-		 */
-		*res_vnode = tmp_vnode;
-		*namelen = strlen(last_tok);
-		*name = last_tok;
+
+		tail_ptr = (char*)pathname + strlen(pathname);
+		namehead_ptr = (char*)pathname;
+		if(pathname[0] == '/'){
+			namehead_ptr++;
+			base_dir = vfs_root_vn;
+		}
+		nametail_ptr = namehead_ptr;
+
+		vref(base_dir);
+
+		if(tail_ptr > nametail_ptr)
+			nametail_ptr++;
+		while(*nametail_ptr != '/' && tail_ptr > nametail_ptr)
+			nametail_ptr++;
+
+		while(nametail_ptr != tail_ptr){
+			len = nametail_ptr - namehead_ptr;
+			ret = lookup(base_dir, namehead_ptr, len, &tmp_vnode);
+
+			if(tail_ptr > nametail_ptr)
+				namehead_ptr = ++nametail_ptr;
+			while(*nametail_ptr != '/' && tail_ptr > nametail_ptr)
+				nametail_ptr++;
+			base_dir = tmp_vnode;
+			if(nametail_ptr != tail_ptr){
+				if(ret != 0)
+					return ret;
+				vput(base_dir);
+			}
+		}
+		len = nametail_ptr - namehead_ptr;
+		*res_vnode = base_dir;
+		*namelen = len;
+		*name = (const char*)namehead_ptr;
         return 0;
 }
 
@@ -112,11 +129,10 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 	lookup_ret = lookup(dir, name, namelen, res_vnode);
 
 	if(lookup_ret != 0 && ((flag || ~O_CREAT) == 0xfff)){
-		create_ret = dir->vn_ops->create(dir,name,res_vnode);
+		create_ret = dir->vn_ops->create(dir,name,namelen,res_vnode);
 		vput(dir);
 		return create_ret;
 	}
-	// just return what lookup() returned.
 	vput(dir);
 	return lookup_ret;
 }
