@@ -567,7 +567,7 @@ do_getdent(int fd, struct dirent *dirp)
 	int offset;
 	if(fd<0 || fd >= NFILES) return -EBADF;
 	ft = fget(fd);
-	if(!S_ISIDR(ft->f_vnode->vn_mode))
+	if(!S_ISDIR(ft->f_vnode->vn_mode))
 		return -ENOTDIR;
 	
 	vref(ft->f_vnode);
@@ -603,7 +603,7 @@ int
 do_lseek(int fd, int offset, int whence)
 {
 		file_t *ft;
-		off_t tmp_pos;
+		off_t tmp_pos = -1;
 
 		KASSERT(fd != -1);
 		if( (ft = fget(fd)) == NULL)
