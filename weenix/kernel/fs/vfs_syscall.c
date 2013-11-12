@@ -664,7 +664,7 @@ do_stat(const char *path, struct stat *buf)
 
 	lookup_ret = lookup(dir, name, namelen, &result);/* If dir has no lookup(), return -ENOTDIR. */
 	vput(dir);
-	if(lookup_ret == -ENOTDIR) return lookup_ret;
+	if(lookup_ret != 0) return lookup_ret;
 	KASSERT(result->vn_ops->stat);
 	ret = result->vn_ops->stat(result, buf);
 	vput(result);
