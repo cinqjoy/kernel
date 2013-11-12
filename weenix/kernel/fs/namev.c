@@ -116,6 +116,10 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 			}
 			base_dir = tmp_vnode;
 		}
+		if(!S_ISDIR(base_dir->vn_mode)){
+			vput(base_dir);
+			return -ENOTDIR;
+		}
 		len = nametail_ptr - namehead_ptr;
 		*res_vnode = base_dir;
 		*namelen = len;
