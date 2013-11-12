@@ -45,6 +45,7 @@
 extern void *testproc(int arg1, void *arg2);
 extern void *sunghan_test(int arg1, void *arg2);
 extern void *sunghan_deadlock_test(int arg1, void *arg2);
+extern int vfstest_main(int argc, char **argv);
 
 GDB_DEFINE_HOOK(boot)
 GDB_DEFINE_HOOK(initialized)
@@ -189,11 +190,20 @@ idleproc_run(int arg1, void *arg2)
 #ifdef __VFS__
         /* Once you have VFS remember to set the current working directory
          * of the idle and init processes */
+	curporc->p_cwd=vfs_root_vn;
+	proc_t *init=proc_lookup(1);
+	init->p_cwd=vfs_root_vn;
 
         /* Here you need to make the null, zero, and tty devices using mknod */
         /* You can't do this until you have VFS, check the include/drivers/dev.h
          * file for macros with the device ID's you will need to pass to mknod */
-        NOT_YET_IMPLEMENTED("VFS: idleproc_run");
+	do_mknod("/dev/null", S_IFCHR, MEM_NULL_DEVID);
+	do_mknod("/dev/zero", S_IFCHR, MEM_ZERO_DEVID);
+	char c[10];
+	for(int i=0; i<NTERMS; i++){
+		sprintf(c,"/dev/tty%d",i);
+		do_mknod(c, S_IFCHR, MKDEVID(2,i));
+		}
 #endif
 
         /* Finally, enable interrupts (we want to make sure interrupts
@@ -274,6 +284,7 @@ initproc_run(int arg1, void *arg2)
         kshell_add_command("testproc",(kshell_cmd_func_t)testproc,"Ted Faber's tests");
         kshell_add_command("shtest",(kshell_cmd_func_t)sunghan_test,"sunghan's tests");
         kshell_add_command("dltest",(kshell_cmd_func_t)sunghan_deadlock_test,"sunghan's deadlock tests");
+	kshell_add_command("vfstest",(kshell_cmd_func_t)vfstest_main,"vfs 506 tests");
         kshell_t *kshell = kshell_create(0);
         if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
         while (kshell_execute_next(kshell));
