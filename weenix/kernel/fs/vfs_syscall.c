@@ -658,8 +658,8 @@ do_getdent(int fd, struct dirent *dirp)
 	
 	vref(ft->f_vnode);
 	KASSERT(NULL != ft->f_vnode->vn_ops->readdir);
-	dbg(DBG_PRINT, "The vnode has readdir()\n");
-	offset = ft->f_vnode->vn_ops->readdir(ft->f_vnode,ft->f_vnode->vn_len,dirp);	
+	dbg(DBG_PRINT, "The vnode has readdir()\n", );
+	offset = ft->f_vnode->vn_ops->readdir(ft->f_vnode,ft->f_pos,dirp);
 	vput(ft->f_vnode);
 
 	if(offset==0){
