@@ -77,6 +77,11 @@ do_open(const char *filename, int oflags)
 	int fd, accmode, flag, err;
 	vnode_t *res_vnode;
 
+	if(strlen(filename) > MAXPATHLEN){ 
+		dbg(DBG_PRINT, "ERROR(Filename=%s): A component of filename was too long.\n", filename);
+		return -ENAMETOOLONG;
+		}
+
 	fd=get_empty_fd(curproc);
 	if(fd<0){
 		dbg(DBG_PRINT, "ERROR(Filename=%s): Current process(pid=%d) already has the maximum number of files open.\n", filename, curproc->p_pid);
@@ -115,22 +120,16 @@ do_open(const char *filename, int oflags)
 		ft->f_vnode->vn_len=0;
 		}
 
-	if(strlen(filename) > MAXPATHLEN){ 
-		fput(ft);
-		dbg(DBG_PRINT, "ERROR(Filename=%s): A component of filename was too long.\n", filename);
-		return -ENAMETOOLONG;
-		}
-	if(!(accmode&O_RDONLY) && S_ISDIR(accmode)){
-		fput(ft);
-		dbg(DBG_PRINT, "ERROR(Filename=%s): Pathname refers to a directory and the access requested involved writing.\n", filename);
-		return -EISDIR;
-		}
-
 	err=open_namev(filename, flag, &res_vnode, NULL);
 	if(err<0){
 		fput(ft);
 		dbg(DBG_PRINT, "ERROR(Filename=%s): The file a directory component in pathname does not exist.\n", filename);
 		return err;/* return -ENOENT */
+		}
+	if(!(accmode&O_RDONLY) && S_ISDIR(res_vnode->vn_mode)){
+		fput(ft);
+		dbg(DBG_PRINT, "ERROR(Filename=%s): Pathname refers to a directory and the access requested involved writing.\n", filename);
+		return -EISDIR;
 		}
 	if(S_ISCHR(res_vnode->vn_mode) && !bytedev_lookup(res_vnode->vn_devid)){
 		vput(res_vnode);
