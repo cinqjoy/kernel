@@ -603,17 +603,18 @@ do_getdent(int fd, struct dirent *dirp)
 	vref(ft->f_vnode);
 	offset = ft->f_vnode->vn_ops->readdir(ft->f_vnode,ft->f_vnode->vn_len,dirp);	
 
-	ft->f_pos += offset;
-	fput(ft);
-	/*vput(ft->f_vnode);
 	if(offset==0){
+		fput(ft);
 		return 0;
-	}else if(offset==sizeof(dirent_t)){
-		return offset;
+	}else if(offset > 0){
+		ft->f_pos += offset;
+		fput(ft);
+		return sizeof(dirent_t);
 	}else{
+		fput(ft);
 		return -errno;
-	}*/
-	return offset;
+	}
+
 	/*NOT_YET_IMPLEMENTED("VFS: do_getdent");*/
         /*return -1;*/
 	
