@@ -237,6 +237,7 @@ do_mknod(const char *path, int mode, unsigned devid)
 		return -EEXIST;        
 	}
 	KASSERT(NULL != dir->vn_ops->mknod);
+	dbg(DBG_PRINT, "(GRADING2A 3.b) The parent has mknod.\n");
 	ret = dir -> vn_ops -> mknod(dir, name, namelen, mode, devid);
 	vput(dir);
 
@@ -280,6 +281,7 @@ do_mkdir(const char *path)
 	if (lookupret == -ENOENT)
 	{
 		KASSERT(NULL != dir->vn_ops->mkdir);
+		dbg(DBG_PRINT, "(GRADING2A 3.c) The parent has mkdir.\n");
 		ret=dir->vn_ops->mkdir(dir, name, namelen);
 		vput(dir);
 		return ret;
@@ -338,6 +340,7 @@ do_rmdir(const char *path)
 			return ret;
 
 	KASSERT(NULL != dir->vn_ops->rmdir);
+	dbg(DBG_PRINT, "(GRADING2A 3.d) The parent has rmdir.\n");
 	/* no need to check if child is directory, done by PFS		*/
 	ret=dir->vn_ops->rmdir(dir, name, namelen);
 
@@ -399,6 +402,7 @@ do_unlink(const char *path)
 
 	vput(result);
 	KASSERT(NULL != dir->vn_ops->unlink);
+	dbg(DBG_PRINT, "(GRADING2A 3.e) The parent has unlink().\n");
 	/* kassert checking non dir in unlink */
 	ret=dir->vn_ops->unlink(dir, name, namelen);
 
@@ -668,6 +672,7 @@ do_stat(const char *path, struct stat *buf)
 	vput(dir);
 	if(lookup_ret != 0) return lookup_ret;
 	KASSERT(result->vn_ops->stat);
+	dbg(DBG_PRINT, "(GRADING2A 3.f) The vnode has stat().\n");
 	ret = result->vn_ops->stat(result, buf);
 	vput(result);
 
