@@ -271,11 +271,6 @@ do_mkdir(const char *path)
 	if(strlen(path) == 0)
 		return -EINVAL;
 
-	if (path[strlen(path)-1] == '.' && path[strlen(path)-2] == '.')
-		return 	-ENOTEMPTY;
-
-	if (path[strlen(path)-1] == '.')
-		return 	-EINVAL;
 
 	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
 
@@ -283,7 +278,16 @@ do_mkdir(const char *path)
 
 	if (ret != 0 )
 		return ret;
-
+	if (path[pathlen-1] == '.' && path[pathlen-2] == '.')
+	{
+		vput(dir);
+		return 	-ENOTEMPTY;
+	}
+	if (path[pathlen-1] == '.')
+	{
+		vput(dir);
+		return 	-EINVAL;
+	}
 
 	lookupret=lookup(dir, name, namelen, &result);
 
@@ -340,18 +344,23 @@ do_rmdir(const char *path)
 	if(strlen(path) == 0)
 		return -EINVAL;
 
-	if (path[pathlen-1] == '.' && path[pathlen-2] == '.')
-		return 	-ENOTEMPTY;
-
-	if (path[pathlen-1] == '.')
-		return 	-EINVAL;
-
 	if(pathlen > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
 
 	ret  = dir_namev(path, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
 
 	if (ret !=0 )
 			return ret;
+	
+	if (path[pathlen-1] == '.' && path[pathlen-2] == '.')
+	{
+		vput(dir);
+		return 	-ENOTEMPTY;
+	}
+	if (path[pathlen-1] == '.')
+	{
+		vput(dir);
+		return 	-EINVAL;
+	}
 
 	KASSERT(NULL != dir->vn_ops->rmdir);
 	dbg(DBG_PRINT, "(GRADING2A 3.d) The parent has rmdir.\n");
