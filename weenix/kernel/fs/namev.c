@@ -135,9 +135,7 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 			namehead_ptr = ++nametail_ptr;
 		while(*nametail_ptr != '/' && tail_ptr > nametail_ptr)
 			nametail_ptr++;
-		if(nametail_ptr != tail_ptr){
-			vput(base_dir);
-		}
+		vput(base_dir);
 		base_dir = tmp_vnode;
 	}
 
