@@ -558,12 +558,13 @@ int
 do_rename(const char *oldname, const char *newname)
 {
 	int identifier, ret;
+
 	ret = do_link(oldname,newname);
 	if(ret != 0)
-			return ret;
+		return ret;
 	identifier = do_unlink(oldname);
-	/*NOT_YET_IMPLEMENTED("VFS: do_rename");*/
-    return identifier;
+
+    	return identifier;
 }
 
 /* Make the named directory the current process's cwd (current working
@@ -587,13 +588,18 @@ do_chdir(const char *path)
 	size_t namelen;
 	int lookup_stat, dir_stat;
 	const char *name;
-	/* res_vnode_ref = n , cur_vnode_ref = k */ 
-	if(strlen(path) == 0) return -EINVAL;
+	/* res_vnode_ref = n , cur_vnode_ref = k */
+ 
+	if(strlen(path) == 0){ 
+		dbg(DBG_PRINT, "ERROR: Path is not valid.\n");
+		return -EINVAL;
+	}
 	if(strlen(path) > MAXPATHLEN){
+		dbg(DBG_PRINT, "ERROR(path=%s): Path is too long.\n", path);
 		return -ENAMETOOLONG;
 	}
 
-	if((dir_stat=dir_namev( path, &namelen , &name,NULL , &res_vnode))){
+	if((dir_stat=dir_namev(path, &namelen , &name, NULL , &res_vnode))){
 		return dir_stat;
 	} 
  	
@@ -609,6 +615,7 @@ do_chdir(const char *path)
 		curproc->p_cwd = cur_vnode;
 	}else{
 		vput(cur_vnode);
+		dbg(DBG_PRINT, "ERROR(path=%s):A component of path is not a directory.\n", path);
 		return -ENOTDIR;
 	}
 	return 0;
@@ -651,7 +658,7 @@ do_getdent(int fd, struct dirent *dirp)
 	
 	vref(ft->f_vnode);
 	KASSERT(NULL != ft->f_vnode->vn_ops->readdir);
-	dbg(DBG_PRINT, "The vnode has readdir()\n", );
+	dbg(DBG_PRINT, "The vnode has readdir()\n");
 	offset = ft->f_vnode->vn_ops->readdir(ft->f_vnode,ft->f_vnode->vn_len,dirp);	
 	vput(ft->f_vnode);
 
