@@ -643,7 +643,7 @@ do_lseek(int fd, int offset, int whence)
 				tmp_pos = offset;
 				break;
 			case SEEK_CUR:
-				tmp_pos += offset;
+				tmp_pos = ft -> f_pos + offset;
 				break;
 			case SEEK_END:
 				tmp_pos = ft->f_vnode->vn_len + offset;
