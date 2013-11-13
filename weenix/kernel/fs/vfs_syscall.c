@@ -88,8 +88,10 @@ do_write(int fd, const void *buf, size_t nbytes)
 		}
         nb = ft -> f_vnode -> vn_ops -> write(ft -> f_vnode, ft -> f_pos, buf, nbytes);
 
-        if(nb>=0)
+        if(nb>=0){
         	KASSERT((S_ISCHR(ft->f_vnode->vn_mode)) || (S_ISBLK(ft->f_vnode->vn_mode)) || ((S_ISREG(ft->f_vnode->vn_mode)) && (ft->f_pos <= ft->f_vnode->vn_len)));
+		dbg(DBG_PRINT, "(GRADING2A 3.a) This is a special file or a regular file. If this is a regular file, its current position must less than the length of file.\n");
+	}
         ft -> f_pos += nb;
 
         fput(ft);
@@ -166,19 +168,18 @@ do_dup(int fd)
 int
 do_dup2(int ofd, int nfd)
 {
-	file_t *oft, *nft;
+	file_t *nft;
 
 	if(ofd == -1) return -EBADF;
-	if( (nft = fget(ofd)) == NULL)
-    	return -EBADF;
+    	if(nfd < 0 || nfd >= NFILES)
+    		return -EBADF;
+	if((nft = fget(ofd)) == NULL)
+    		return -EBADF;
 
     if(nfd == ofd){
     	fput(nft);
     	return nfd;
     }
-
-    if(nfd < 0 || nfd >= NFILES)
-    	return -EBADF;
 
     if(curproc->p_files[nfd] != NULL)
     	do_close(nfd);
