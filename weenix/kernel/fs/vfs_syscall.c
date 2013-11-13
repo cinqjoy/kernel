@@ -593,8 +593,10 @@ do_getdent(int fd, struct dirent *dirp)
 {
 	file_t *ft;
 	int offset;
-	if(fd<0 || fd >= NFILES) return -EBADF;
-	ft = fget(fd);
+    if(fd == -1) return -EBADF;
+    if( (ft = fget(fd)) == NULL)
+    	return -EBADF;
+
 	if(!S_ISDIR(ft->f_vnode->vn_mode))
 		return -ENOTDIR;
 	
