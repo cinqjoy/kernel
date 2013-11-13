@@ -166,7 +166,7 @@ do_dup(int fd)
 int
 do_dup2(int ofd, int nfd)
 {
-	file_t *oft, *nft;
+	file_t *nft;
 
 	if(ofd == -1) return -EBADF;
     	if(nfd < 0 || nfd >= NFILES)
