@@ -132,7 +132,7 @@ do_close(int fd)
         	return -EBADF;
 	}
         fput(ft);
-
+	dbg(DBG_VNREF, "***ref count=%d.\n", ft->f_vnode->vn_refcount);
         curproc->p_files[fd]=NULL;
         return 0;
 }
