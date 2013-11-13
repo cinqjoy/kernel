@@ -168,8 +168,8 @@ do_dup2(int ofd, int nfd)
 {
 	file_t *oft, *nft;
 
-    KASSERT(ofd != -1);
-    if( (nft = fget(ofd)) == NULL)
+	if(ofd == -1) return -EBADF;
+	if( (nft = fget(ofd)) == NULL)
     	return -EBADF;
 
     if(nfd == ofd){
