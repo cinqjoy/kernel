@@ -611,9 +611,6 @@ do_getdent(int fd, struct dirent *dirp)
 		ft->f_pos += offset;
 		fput(ft);
 		return sizeof(dirent_t);
-	}else{
-		fput(ft);
-		return -errno;
 	}
 
 	/*NOT_YET_IMPLEMENTED("VFS: do_getdent");*/
