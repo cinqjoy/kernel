@@ -44,7 +44,7 @@ do_read(int fd, void *buf, size_t nbytes)
         file_t *ft;
         int nb;
 
-        KASSERT(fd != -1);
+        if(fd == -1) return -EBADF;
         if( (ft = fget(fd)) == NULL)
         	return -EBADF;
         if( (ft -> f_mode & FMODE_READ) != FMODE_READ){
@@ -76,7 +76,7 @@ do_write(int fd, const void *buf, size_t nbytes)
         file_t *ft;
         int nb;
 
-        KASSERT(fd != -1);
+        if(fd == -1) return -EBADF;
         if( (ft = fget(fd)) == NULL)
         	return -EBADF;
         if( (ft -> f_mode & FMODE_WRITE) != FMODE_WRITE){
@@ -108,7 +108,7 @@ do_close(int fd)
 {
         file_t *ft;
 
-        KASSERT(fd != -1);
+        if(fd == -1) return -EBADF;
         if( (ft = fget(fd)) == NULL)
         	return -EBADF;
 
@@ -140,7 +140,7 @@ do_dup(int fd)
 	file_t *ft;
 	int dupfd;
 
-    KASSERT(fd != -1);
+    if(fd == -1) return -EBADF;
     if( (ft = fget(fd)) == NULL)
     	return -EBADF;
 
@@ -633,7 +633,7 @@ do_lseek(int fd, int offset, int whence)
 		file_t *ft;
 		off_t tmp_pos = -1;
 
-		KASSERT(fd != -1);
+		if(fd == -1) return -EBADF;
 		if( (ft = fget(fd)) == NULL)
 			return -EBADF;
 
