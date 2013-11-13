@@ -297,6 +297,7 @@ do_mkdir(const char *path)
 	const char *name;
 	vnode_t *dir, *result;
 	int ret, lookupret;
+	int pathlen = strlen(path);
 
 	if(strlen(path) == 0)
 		return -EINVAL;
