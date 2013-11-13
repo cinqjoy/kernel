@@ -239,7 +239,7 @@ do_mknod(const char *path, int mode, unsigned devid)
 		return -EEXIST;        
 	}
 	KASSERT(NULL != dir->vn_ops->mknod);
-	dbg(DBG_PRINT, "(GRADING2A 3.b) The parent has mknod.\n");
+	dbg(DBG_PRINT, "(GRADING2A 3.b) The parent has mknod().\n");
 	ret = dir -> vn_ops -> mknod(dir, name, namelen, mode, devid);
 	vput(dir);
 
@@ -292,7 +292,7 @@ do_mkdir(const char *path)
 	if (lookupret == -ENOENT)
 	{
 		KASSERT(NULL != dir->vn_ops->mkdir);
-		dbg(DBG_PRINT, "(GRADING2A 3.c) The parent has mkdir.\n");
+		dbg(DBG_PRINT, "(GRADING2A 3.c) The parent has mkdir().\n");
 		ret=dir->vn_ops->mkdir(dir, name, namelen);
 		vput(dir);
 		return ret;
@@ -354,7 +354,7 @@ do_rmdir(const char *path)
 			return ret;
 
 	KASSERT(NULL != dir->vn_ops->rmdir);
-	dbg(DBG_PRINT, "(GRADING2A 3.d) The parent has rmdir.\n");
+	dbg(DBG_PRINT, "(GRADING2A 3.d) The parent has rmdir().\n");
 	/* no need to check if child is directory, done by PFS		*/
 	ret=dir->vn_ops->rmdir(dir, name, namelen);
 
