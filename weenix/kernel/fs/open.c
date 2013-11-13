@@ -115,7 +115,7 @@ do_open(const char *filename, int oflags)
 		}
 
 	if(flag&O_APPEND) ft->f_mode|=FMODE_APPEND;
-	if(flag&O_TRUNC && !(accmode&O_RDONLY)){
+	if(flag&O_TRUNC && (accmode&O_WRONLY || accmode&O_RDWR)){
 		ft->f_pos=0;
 		ft->f_vnode->vn_len=0;
 		}
@@ -126,7 +126,7 @@ do_open(const char *filename, int oflags)
 		dbg(DBG_PRINT, "ERROR(Filename=%s): The file a directory component in pathname does not exist.\n", filename);
 		return err;/* return -ENOENT */
 		}
-	if(!(accmode&O_RDONLY) && S_ISDIR(res_vnode->vn_mode)){
+	if((accmode&O_WRONLY || accmode&O_RDWR) && S_ISDIR(res_vnode->vn_mode)){
 		fput(ft);
 		dbg(DBG_PRINT, "ERROR(Filename=%s): Pathname refers to a directory and the access requested involved writing.\n", filename);
 		return -EISDIR;
