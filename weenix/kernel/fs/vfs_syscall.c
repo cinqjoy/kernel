@@ -221,6 +221,7 @@ do_mknod(const char *path, int mode, unsigned devid)
 	int namev_ret, lookup_ret, ret;
 
 	if(!S_ISCHR(mode) && !S_ISBLK(mode)) return -EINVAL;
+	if(strlen(path) == 0) return -EINVAL;
 	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
 
 	namev_ret = dir_namev(path, &namelen, &name, NULL, &dir);
@@ -265,6 +266,15 @@ do_mkdir(const char *path)
 	const char *name;
 	vnode_t *dir, *result;
 	int ret, lookupret;
+
+	if(strlen(path) == 0)
+		return -EINVAL;
+
+	if (path[strlen(path)-1] == '.' && path[strlen(path)-2] == '.')
+		return 	-ENOTEMPTY;
+
+	if (path[strlen(path)-1] == '.')
+		return 	-EINVAL;
 
 	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
 
@@ -325,6 +335,9 @@ do_rmdir(const char *path)
 	vnode_t *dir;
 	int ret;
 	int pathlen = strlen(path);
+
+	if(strlen(path) == 0)
+		return -EINVAL;
 
 	if (path[pathlen-1] == '.' && path[pathlen-2] == '.')
 		return 	-ENOTEMPTY;
@@ -447,15 +460,15 @@ do_link(const char *from, const char *to)
 
 	if(pathlen > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
 
-  /* diffeernt order from dir_namev */
-  /* call open_namev */
+    /*diffeernt order from dir_namev */
+    /*call open_namev */
 	/*ret = open_namev(from, O_CREAT || O_RDWR , &fromv, NULL);*/
 	ret = open_namev(from, O_WRONLY , &fromv, NULL);
 
 
 	if (ret !=0  )
 			return ret;
-	/* assume old path must exists according to linux spec*/
+	/*assume old path must exists according to linux spec*/
 
 	/*vput(fromv);*/
 
@@ -503,11 +516,13 @@ do_link(const char *from, const char *to)
 int
 do_rename(const char *oldname, const char *newname)
 {
-	int identifier;       
-	do_link(oldname,newname);
+	int identifier, ret;
+	ret = do_link(oldname,newname);
+	if(ret != 0)
+			return ret;
 	identifier = do_unlink(oldname);
 	/*NOT_YET_IMPLEMENTED("VFS: do_rename");*/
-        return identifier;
+    return identifier;
 }
 
 /* Make the named directory the current process's cwd (current working
@@ -532,6 +547,7 @@ do_chdir(const char *path)
 	int lookup_stat, dir_stat;
 	const char *name;
 	/* res_vnode_ref = n , cur_vnode_ref = k */ 
+	if(strlen(path) == 0) return -EINVAL;
 	if(strlen(path) > MAXPATHLEN){
 		return -ENAMETOOLONG;
 	}
@@ -662,11 +678,11 @@ do_stat(const char *path, struct stat *buf)
 	vnode_t *dir, *result;
 	int namev_ret, lookup_ret, ret;
 
+	if(strlen(path) == 0) return -EINVAL;
 	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
 
 	namev_ret = dir_namev(path, &namelen, &name, NULL, &dir);
-	if(namev_ret == -ENOENT || namev_ret == -ENOTDIR) return namev_ret;
-
+	if(namev_ret != 0) return namev_ret;
 
 	lookup_ret = lookup(dir, name, namelen, &result);/* If dir has no lookup(), return -ENOTDIR. */
 	vput(dir);
