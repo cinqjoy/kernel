@@ -642,7 +642,9 @@ do_getdent(int fd, struct dirent *dirp)
 		return -ENOTDIR;
 	
 	vref(ft->f_vnode);
+	KASSERT(NULL != ft->f_vnode->vn_ops->readdir);
 	offset = ft->f_vnode->vn_ops->readdir(ft->f_vnode,ft->f_vnode->vn_len,dirp);	
+	vput(ft->f_vnode);
 
 	if(offset==0){
 		fput(ft);
@@ -696,8 +698,8 @@ do_lseek(int fd, int offset, int whence)
 			return -EINVAL;
 
 		ft -> f_pos = tmp_pos;
-
-		return 0;
+		fput(ft);
+		return tmp_pos;
 }
 
 /*
