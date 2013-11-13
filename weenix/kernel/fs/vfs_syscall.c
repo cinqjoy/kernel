@@ -169,16 +169,15 @@ do_dup2(int ofd, int nfd)
 	file_t *oft, *nft;
 
 	if(ofd == -1) return -EBADF;
-	if( (nft = fget(ofd)) == NULL)
-    	return -EBADF;
+    	if(nfd < 0 || nfd >= NFILES)
+    		return -EBADF;
+	if((nft = fget(ofd)) == NULL)
+    		return -EBADF;
 
     if(nfd == ofd){
     	fput(nft);
     	return nfd;
     }
-
-    if(nfd < 0 || nfd >= NFILES)
-    	return -EBADF;
 
     if(curproc->p_files[nfd] != NULL)
     	do_close(nfd);
