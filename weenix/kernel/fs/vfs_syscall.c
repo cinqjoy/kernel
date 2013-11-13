@@ -634,15 +634,24 @@ do_getdent(int fd, struct dirent *dirp)
 {
 	file_t *ft;
 	int offset;
-    if(fd == -1) return -EBADF;
-    if( (ft = fget(fd)) == NULL)
-    	return -EBADF;
 
-	if(!S_ISDIR(ft->f_vnode->vn_mode))
+    	if(fd == -1){
+		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not an open file descriptor.\n", fd);
+		return -EBADF;
+	}
+    	if((ft = fget(fd)) == NULL){
+		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not an open file descriptor.\n", fd);
+    		return -EBADF;
+	}
+
+	if(!S_ISDIR(ft->f_vnode->vn_mode)){
+		dbg(DBG_PRINT, "ERROR(fd=%d): File descriptor does not refer to a directory.\n", fd);
 		return -ENOTDIR;
+	}
 	
 	vref(ft->f_vnode);
 	KASSERT(NULL != ft->f_vnode->vn_ops->readdir);
+	dbg(DBG_PRINT, "The vnode has readdir()\n", );
 	offset = ft->f_vnode->vn_ops->readdir(ft->f_vnode,ft->f_vnode->vn_len,dirp);	
 	vput(ft->f_vnode);
 
@@ -654,10 +663,6 @@ do_getdent(int fd, struct dirent *dirp)
 		fput(ft);
 		return sizeof(dirent_t);
 	}
-
-	/*NOT_YET_IMPLEMENTED("VFS: do_getdent");*/
-        /*return -1;*/
-	
 }
 
 /*
@@ -673,33 +678,42 @@ do_getdent(int fd, struct dirent *dirp)
 int
 do_lseek(int fd, int offset, int whence)
 {
-		file_t *ft;
-		off_t tmp_pos = -1;
+	file_t *ft;
+	off_t tmp_pos = -1;
 
-		if(fd == -1) return -EBADF;
-		if( (ft = fget(fd)) == NULL)
-			return -EBADF;
+	if(fd == -1){
+		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not an open file descriptor.\n", fd);
+		return -EBADF;
+	}
+	if((ft = fget(fd)) == NULL){
+		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not an open file descriptor.\n", fd);
+		return -EBADF;
+	}
 
-		switch(whence){
-			case SEEK_SET:
-				tmp_pos = offset;
-				break;
-			case SEEK_CUR:
-				tmp_pos = ft -> f_pos + offset;
-				break;
-			case SEEK_END:
-				tmp_pos = ft->f_vnode->vn_len + offset;
-				break;
-			default:
-				return -EINVAL;
-				break;
-		}
-		if(tmp_pos < 0)
+	switch(whence){
+		case SEEK_SET:
+			tmp_pos = offset;
+			break;
+		case SEEK_CUR:
+			tmp_pos = ft -> f_pos + offset;
+			break;
+		case SEEK_END:
+			tmp_pos = ft->f_vnode->vn_len + offset;
+			break;
+		default:
+			dbg(DBG_PRINT, "ERROR(fd=%d): whence is not valid.\n", fd);
 			return -EINVAL;
+			break;
+	}
+	if(tmp_pos < 0){
+		dbg(DBG_PRINT, "ERROR(fd=%d): The resulting file offset is negative.\n", fd);		
+		return -EINVAL;
+	}
 
-		ft -> f_pos = tmp_pos;
-		fput(ft);
-		return tmp_pos;
+	ft -> f_pos = tmp_pos;
+	dbg(DBG_PRINT, "The fpos of fd=%d is moved to %d\n", fd, ft->f_pos);
+	fput(ft);
+	return tmp_pos;
 }
 
 /*
@@ -721,15 +735,24 @@ do_stat(const char *path, struct stat *buf)
 	vnode_t *dir, *result;
 	int namev_ret, lookup_ret, ret;
 
-	if(strlen(path) == 0) return -EINVAL;
-	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+	if(strlen(path) == 0){ 
+		dbg(DBG_PRINT, "ERROR: Path is not valid.\n");
+		return -EINVAL;
+	}
+	if(strlen(path) > MAXPATHLEN){ 
+		dbg(DBG_PRINT, "ERROR(path=%s): Path is too long.\n", path);
+		return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+	}
 
 	namev_ret = dir_namev(path, &namelen, &name, NULL, &dir);
-	if(namev_ret != 0) return namev_ret;
+	if(namev_ret != 0)
+		return namev_ret;
 
-	lookup_ret = lookup(dir, name, namelen, &result);/* If dir has no lookup(), return -ENOTDIR. */
+	lookup_ret = lookup(dir, name, namelen, &result);
 	vput(dir);
-	if(lookup_ret != 0) return lookup_ret;
+	if(lookup_ret != 0)
+		return lookup_ret;
+
 	KASSERT(result->vn_ops->stat);
 	dbg(DBG_PRINT, "(GRADING2A 3.f) The vnode has stat().\n");
 	ret = result->vn_ops->stat(result, buf);
