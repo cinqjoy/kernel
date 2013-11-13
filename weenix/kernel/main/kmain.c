@@ -233,6 +233,7 @@ idleproc_run(int arg1, void *arg2)
         /* Shutdown the vfs: */
         dbg_print("weenix: vfs shutdown...\n");
         vput(curproc->p_cwd);
+		vput(init->p_cwd);
         if (vfs_shutdown())
                 panic("vfs shutdown FAILED!!\n");
 
@@ -273,6 +274,13 @@ initproc_create(void)
         return initthr;
 }
 
+static void *
+my_vfstest(kshell_t *kshell, int argc, char **argv){
+	return (void*)vfstest_main(argc,argv);
+}
+
+
+
 /**
  * The init thread's function changes depending on how far along your Weenix is
  * developed. Before VM/FI, you'll probably just want to have this run whatever
@@ -291,8 +299,8 @@ initproc_run(int arg1, void *arg2)
         kshell_add_command("testproc",(kshell_cmd_func_t)testproc,"Ted Faber's tests");
         kshell_add_command("shtest",(kshell_cmd_func_t)sunghan_test,"sunghan's tests");
         kshell_add_command("dltest",(kshell_cmd_func_t)sunghan_deadlock_test,"sunghan's deadlock tests");
-        kshell_add_command("vfstest",(kshell_cmd_func_t)vfstest_main(1,NULL),"vfs 506 tests");
-        kshell_t *kshell = kshell_create(MKDEVID(2, 0));
+        kshell_add_command("vfstest",(kshell_cmd_func_t)my_vfstest,"vfs 506 tests");
+        kshell_t *kshell = kshell_create(0);
         if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
         while (kshell_execute_next(kshell));
         kshell_destroy(kshell);

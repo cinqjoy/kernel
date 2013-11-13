@@ -118,23 +118,22 @@ do_write(int fd, const void *buf, size_t nbytes)
  *      o EBADF
  *        fd isn't a valid open file descriptor.
  */
-int
+	int
 do_close(int fd)
 {
-        file_t *ft;
+	file_t *ft;
 
-        if(fd == -1){ 
+	if(fd == -1){ 
 		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
 		return -EBADF;
 	}
-        if((ft = fget(fd)) == NULL){
+	if((ft = fget(fd)) == NULL){
 		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
-        	return -EBADF;
+		return -EBADF;
 	}
-        fput(ft);
-	dbg(DBG_VNREF, "***ref count=%d.\n", ft->f_vnode->vn_refcount);
-        curproc->p_files[fd]=NULL;
-        return 0;
+	fput(ft);
+	curproc->p_files[fd]=NULL;
+	return 0;
 }
 
 /* To dup a file:
@@ -309,17 +308,19 @@ do_mkdir(const char *path)
 
 	if (ret != 0 )
 		return ret;
+	/*
 	if (path[pathlen-1] == '.' && path[pathlen-2] == '.')
 	{
 		vput(dir);
 		return 	-ENOTEMPTY;
 	}
+
 	if (path[pathlen-1] == '.')
 	{
 		vput(dir);
 		return 	-EINVAL;
 	}
-
+	*/
 	lookupret=lookup(dir, name, namelen, &result);
 
 
@@ -670,6 +671,8 @@ do_getdent(int fd, struct dirent *dirp)
 		fput(ft);
 		return sizeof(dirent_t);
 	}
+	/*Should not get here*/
+	return -EINVAL;
 }
 
 /*
