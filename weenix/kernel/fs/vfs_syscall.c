@@ -602,7 +602,7 @@ do_chdir(const char *path)
 		return lookup_stat;
 	}
 	
-	/*vput(res_vnode);*/
+	vput(res_vnode);
 	
 	if(S_ISDIR(cur_vnode->vn_mode)){
 		vput(curproc->p_cwd);
