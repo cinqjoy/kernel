@@ -117,7 +117,7 @@ do_open(const char *filename, int oflags)
 
 	if(strlen(filename) > MAXPATHLEN){ 
 		fput(ft);
-		dbg(DBG_PRINT, "ERROR(Filename=%s): A component of filename(%s) was too long.\n", filename);
+		dbg(DBG_PRINT, "ERROR(Filename=%s): A component of filename was too long.\n", filename);
 		return -ENAMETOOLONG;
 		}
 	if(!(accmode&O_RDONLY) && S_ISDIR(accmode)){
