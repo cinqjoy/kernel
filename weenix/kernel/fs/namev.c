@@ -25,16 +25,23 @@
 int
 lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 {
-		KASSERT(NULL != dir);
-		KASSERT(NULL != name);
-		KASSERT(NULL != result);
+	KASSERT(NULL != dir);
+	dbg(DBG_PRINT, "(GRADING2A 2.a) The vnode of the parent directory of \"%s\" is not NULL.\n", name);
+	KASSERT(NULL != name);
+	dbg(DBG_PRINT, "(GRADING2A 2.a) Name is not NULL.\n");
+	KASSERT(NULL != result);
+	dbg(DBG_PRINT, "(GRADING2A 2.a) The result vnode \"%s\" is not NULL.\n", name);
+
         if (len > NAME_LEN)
 		{
+			dbg(DBG_PRINT, "ERROR(name=%s): A component of filename is too long.\n", name);
 			return -ENAMETOOLONG;
 		}
 
-        if(dir->vn_ops->lookup == NULL||(!S_ISDIR(dir->vn_mode)))
+        if(dir->vn_ops->lookup == NULL||(!S_ISDIR(dir->vn_mode))){
+		dbg(DBG_PRINT, "ERROR(name=%s): dir is not a directory.\n", name);
         	return -ENOTDIR;
+	}
 
 
         if(strcmp(name,".")==0||len == 0){
@@ -69,70 +76,82 @@ int
 dir_namev(const char *pathname, size_t *namelen, const char **name,
           vnode_t *base, vnode_t **res_vnode)
 {
-		KASSERT(NULL != pathname);
-		KASSERT(NULL != namelen);
-		KASSERT(NULL != name);
-		KASSERT(NULL != res_vnode);
+	KASSERT(NULL != pathname);
+	dbg(DBG_PRINT, "(GRADING2A 2.b) pathname \"%s\" is not NULL.\n", pathname);
+	KASSERT(NULL != namelen);
+	dbg(DBG_PRINT, "(GRADING2A 2.b) namelen is not NULL.\n");
+	KASSERT(NULL != name);
+	dbg(DBG_PRINT, "(GRADING2A 2.b) name is not NULL.\n");
+	KASSERT(NULL != res_vnode);
+	dbg(DBG_PRINT, "(GRADING2A 2.b) The result vnode is not NULL.\n");
 
-		char *namehead_ptr, *nametail_ptr, *tail_ptr;
-		vnode_t *base_dir;
-		vnode_t *tmp_vnode;
-		int ret, len;
+	char *namehead_ptr, *nametail_ptr, *tail_ptr;
+	vnode_t *base_dir;
+	vnode_t *tmp_vnode;
+	int ret, len;
 
-		if (strlen(pathname)> MAXPATHLEN) 
-			return -ENAMETOOLONG;
+	if (strlen(pathname)> MAXPATHLEN){ 
+		dbg(DBG_PRINT, "ERROR(pathname=%s): A component of pathname is too long.\n", pathname);
+		return -ENAMETOOLONG;
+	}
 
-		if(base == NULL) base_dir = curproc->p_cwd;
-		else base_dir = base;
+	if(base == NULL) base_dir = curproc->p_cwd;
+	else base_dir = base;
 
-		if(strlen(pathname) == 0){
-			*name = pathname;
-			*namelen = 0;
-			*res_vnode = base;
-			return 0;
+	if(strlen(pathname) == 0){
+		*name = pathname;
+		*namelen = 0;
+		*res_vnode = base;
+		return 0;
+	}
+
+	tail_ptr = (char*)pathname + strlen(pathname);
+	namehead_ptr = (char*)pathname;
+	if(pathname[0] == '/'){
+		namehead_ptr++;
+		base_dir = vfs_root_vn;
+	}
+	nametail_ptr = namehead_ptr;
+
+	vref(base_dir);
+
+	if(tail_ptr > nametail_ptr)
+		nametail_ptr++;
+	while(*nametail_ptr != '/' && tail_ptr > nametail_ptr)
+		nametail_ptr++;
+
+	while(nametail_ptr != tail_ptr){
+		len = nametail_ptr - namehead_ptr;
+		KASSERT(NULL != base_dir);
+		dbg(DBG_PRINT, "(GRADING2A 2.b) The vnode that we gonna use for lookup is not NULL.\n");
+		ret = lookup(base_dir, namehead_ptr, len, &tmp_vnode);
+		if(ret != 0){
+			vput(base_dir);
+			dbg(DBG_PRINT, "ERROR(pathname=%s): lookup failed; Can NOT find the directory or the component of the pathname is Not a directory.\n", pathname);
+			return ret;
 		}
-
-		tail_ptr = (char*)pathname + strlen(pathname);
-		namehead_ptr = (char*)pathname;
-		if(pathname[0] == '/'){
-			namehead_ptr++;
-			base_dir = vfs_root_vn;
-		}
-		nametail_ptr = namehead_ptr;
-
-		vref(base_dir);
 
 		if(tail_ptr > nametail_ptr)
-			nametail_ptr++;
+			namehead_ptr = ++nametail_ptr;
 		while(*nametail_ptr != '/' && tail_ptr > nametail_ptr)
 			nametail_ptr++;
-
-		while(nametail_ptr != tail_ptr){
-			len = nametail_ptr - namehead_ptr;
-			KASSERT(NULL != base_dir);
-			ret = lookup(base_dir, namehead_ptr, len, &tmp_vnode);
-			if(ret != 0){
-				vput(base_dir);
-				return ret;
-			}
-
-			if(tail_ptr > nametail_ptr)
-				namehead_ptr = ++nametail_ptr;
-			while(*nametail_ptr != '/' && tail_ptr > nametail_ptr)
-				nametail_ptr++;
-			if(nametail_ptr != tail_ptr){
-				vput(base_dir);
-			}
-			base_dir = tmp_vnode;
-		}
-		if(!S_ISDIR(base_dir->vn_mode)){
+		if(nametail_ptr != tail_ptr){
 			vput(base_dir);
-			return -ENOTDIR;
 		}
-		len = nametail_ptr - namehead_ptr;
-		*res_vnode = base_dir;
-		*namelen = len;
-		*name = (const char*)namehead_ptr;
+		base_dir = tmp_vnode;
+	}
+
+	if(!S_ISDIR(base_dir->vn_mode)){
+		vput(base_dir);
+		dbg(DBG_PRINT, "ERROR(pathname=%s): The component of the pathname is Not a directory.\n", pathname);
+		return -ENOTDIR;
+	}
+
+	len = nametail_ptr - namehead_ptr;
+	*res_vnode = base_dir;
+	*namelen = len;
+	*name = (const char*)namehead_ptr;
+
         return 0;
 }
 
@@ -152,15 +171,20 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 	vnode_t *dir, *result;
 	int namev_ret, lookup_ret, create_ret;
 
-	if(strlen(pathname) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
-
+	if(strlen(pathname) > MAXPATHLEN){
+		dbg(DBG_PRINT, "ERROR(pathname=%s): A component of pathname is too long.\n", pathname);
+		return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+	}
 	namev_ret = dir_namev(pathname, &namelen, &name, base, &dir);
-	if(namev_ret != 0) return namev_ret;
+	if(namev_ret != 0){ 
+		dbg(DBG_PRINT, "ERROR(pathname=%s): The component of the pathname is Not a directory.\n", pathname);
+		return namev_ret;
+	}
 
 	lookup_ret = lookup(dir, name, namelen, res_vnode);
-
 	if(lookup_ret != 0 && ((flag | (~(uint32_t)O_CREAT)) == 0xffffffff)){
 		KASSERT(NULL != dir->vn_ops->create);
+		dbg(DBG_PRINT, "(GRADING2A 2.c) The parent is a directory.\n");
 		create_ret = dir->vn_ops->create(dir,name,namelen,res_vnode);
 		vput(dir);
 		return create_ret;
