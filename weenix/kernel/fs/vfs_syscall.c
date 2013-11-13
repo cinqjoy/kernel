@@ -44,15 +44,22 @@ do_read(int fd, void *buf, size_t nbytes)
         file_t *ft;
         int nb;
 
-        if(fd == -1) return -EBADF;
-        if( (ft = fget(fd)) == NULL)
+        if(fd == -1){
+		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
+		return -EBADF;
+	}
+        if((ft = fget(fd)) == NULL){
+		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
         	return -EBADF;
-        if( (ft -> f_mode & FMODE_READ) != FMODE_READ){
-            fput(ft);
-            return -EBADF;
+	}
+        if((ft -> f_mode & FMODE_READ) != FMODE_READ){
+        	fput(ft);
+		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not open for reading.\n", fd);
+                return -EBADF;
 		}
         if(S_ISDIR(ft->f_vnode->vn_mode)){
         	fput(ft);
+		dbg(DBG_PRINT, "ERROR(fd=%d): fd refers to a directory.\n", fd);
         	return -EISDIR;
 		}
         nb = ft -> f_vnode -> vn_ops -> read(ft -> f_vnode, ft -> f_pos, buf, nbytes);
@@ -76,14 +83,20 @@ do_write(int fd, const void *buf, size_t nbytes)
         file_t *ft;
         int nb;
 
-        if(fd == -1) return -EBADF;
-        if( (ft = fget(fd)) == NULL)
+        if(fd == -1){ 
+		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
+		return -EBADF;
+	}
+        if((ft = fget(fd)) == NULL){
+		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
         	return -EBADF;
-        if( (ft -> f_mode & FMODE_WRITE) != FMODE_WRITE){
+	}
+        if((ft -> f_mode & FMODE_WRITE) != FMODE_WRITE){
                 fput(ft);
+		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not open for writing.\n", fd);
                 return -EBADF;
 		}
-        if( (ft -> f_mode & FMODE_APPEND) == FMODE_APPEND){
+        if((ft -> f_mode & FMODE_APPEND) == FMODE_APPEND){
                 ft -> f_pos = do_lseek(fd, 0, SEEK_END);/* err */
 		}
         nb = ft -> f_vnode -> vn_ops -> write(ft -> f_vnode, ft -> f_pos, buf, nbytes);
@@ -110,12 +123,16 @@ do_close(int fd)
 {
         file_t *ft;
 
-        if(fd == -1) return -EBADF;
-        if( (ft = fget(fd)) == NULL)
+        if(fd == -1){ 
+		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
+		return -EBADF;
+	}
+        if((ft = fget(fd)) == NULL){
+		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
         	return -EBADF;
-
+	}
         fput(ft);
-
+	dbg(DBG_VNREF, "***ref count=%d.\n", ft->f_vnode->vn_refcount);
         curproc->p_files[fd]=NULL;
         return 0;
 }
@@ -142,18 +159,24 @@ do_dup(int fd)
 	file_t *ft;
 	int dupfd;
 
-    if(fd == -1) return -EBADF;
-    if( (ft = fget(fd)) == NULL)
-    	return -EBADF;
+    	if(fd == -1){ 
+		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
+		return -EBADF;
+	}
+    	if((ft = fget(fd)) == NULL){
+		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
+    		return -EBADF;
+	}
 
-    dupfd = get_empty_fd(curproc);
+    	dupfd = get_empty_fd(curproc);
 	if(dupfd < 0){
 		fput(ft);
+		dbg(DBG_PRINT, "ERROR(fd=%d): The process already has the maximum number of file descriptors open and tried to open a new one.\n", fd);
 		return dupfd;
 	}
 	curproc -> p_files[dupfd] = curproc -> p_files[fd];
         
-    return dupfd;
+    	return dupfd;
 }
 
 /* Same as do_dup, but insted of using get_empty_fd() to get the new fd,
@@ -170,22 +193,29 @@ do_dup2(int ofd, int nfd)
 {
 	file_t *nft;
 
-	if(ofd == -1) return -EBADF;
-    	if(nfd < 0 || nfd >= NFILES)
+	if(ofd == -1){
+		dbg(DBG_PRINT, "ERROR(ofd=%d): fd is not a valid file descriptor.\n", ofd);
+		return -EBADF;
+	}
+    	if(nfd < 0 || nfd >= NFILES){
+		dbg(DBG_PRINT, "ERROR(nfd=%d): fd is not a valid file descriptor.\n", nfd);
     		return -EBADF;
-	if((nft = fget(ofd)) == NULL)
+	}
+	if((nft = fget(ofd)) == NULL){
+		dbg(DBG_PRINT, "ERROR(ofd=%d): fd is not a valid file descriptor.\n", ofd);
     		return -EBADF;
+	}
 
-    if(nfd == ofd){
-    	fput(nft);
-    	return nfd;
-    }
+    	if(nfd == ofd){
+    		fput(nft);
+    		return nfd;
+    	}
 
-    if(curproc->p_files[nfd] != NULL)
-    	do_close(nfd);
+    	if(curproc->p_files[nfd] != NULL)
+    		do_close(nfd);
 	curproc->p_files[nfd]=curproc->p_files[ofd];
         
-    return nfd;
+    	return nfd;
 }
 
 /*
@@ -239,7 +269,7 @@ do_mknod(const char *path, int mode, unsigned devid)
 		return -EEXIST;        
 	}
 	KASSERT(NULL != dir->vn_ops->mknod);
-	dbg(DBG_PRINT, "(GRADING2A 3.b) The parent has mknod.\n");
+	dbg(DBG_PRINT, "(GRADING2A 3.b) The parent has mknod().\n");
 	ret = dir -> vn_ops -> mknod(dir, name, namelen, mode, devid);
 	vput(dir);
 
@@ -296,7 +326,7 @@ do_mkdir(const char *path)
 	if (lookupret == -ENOENT)
 	{
 		KASSERT(NULL != dir->vn_ops->mkdir);
-		dbg(DBG_PRINT, "(GRADING2A 3.c) The parent has mkdir.\n");
+		dbg(DBG_PRINT, "(GRADING2A 3.c) The parent has mkdir().\n");
 		ret=dir->vn_ops->mkdir(dir, name, namelen);
 		vput(dir);
 		return ret;
@@ -363,7 +393,7 @@ do_rmdir(const char *path)
 	}
 
 	KASSERT(NULL != dir->vn_ops->rmdir);
-	dbg(DBG_PRINT, "(GRADING2A 3.d) The parent has rmdir.\n");
+	dbg(DBG_PRINT, "(GRADING2A 3.d) The parent has rmdir().\n");
 	/* no need to check if child is directory, done by PFS		*/
 	ret=dir->vn_ops->rmdir(dir, name, namelen);
 
