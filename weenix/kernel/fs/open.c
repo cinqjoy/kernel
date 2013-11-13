@@ -77,7 +77,7 @@ do_open(const char *filename, int oflags)
 	int fd, accmode, flag, err;
 	vnode_t *res_vnode;
 
-	if(strlen(filename) > MAXPATHLEN){ 
+	if(strlen(filename) > NAME_LEN){ 
 		dbg(DBG_PRINT, "ERROR(Filename=%s): A component of filename was too long.\n", filename);
 		return -ENAMETOOLONG;
 		}
