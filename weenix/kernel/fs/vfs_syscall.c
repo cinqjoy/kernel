@@ -151,6 +151,7 @@ do_close(int fd)
 		TEST_DBG("DO_CLOSE_OUT\n");
 		return -EBADF;
 	}
+	vput(ft);
 	fput(ft);
 	curproc->p_files[fd]=NULL;
 	TEST_DBG("DO_CLOSE_OUT\n");
