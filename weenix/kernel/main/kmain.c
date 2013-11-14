@@ -39,6 +39,7 @@
 #include "fs/vfs_syscall.h"
 #include "fs/fcntl.h"
 #include "fs/stat.h"
+#include "fs/lseek.h"
 
 #include "test/kshell/kshell.h"
 
@@ -279,7 +280,20 @@ my_vfstest(kshell_t *kshell, int argc, char **argv){
 	return (void*)vfstest_main(argc,argv);
 }
 
-
+static void *
+self_test(kshell_t *kshell, int argc, char **argv){
+	int fd, fpos;
+	fd = do_open("file0001", O_RDWR | O_CREAT);
+	do_write(fd, "selftest", 6);
+	do_close(fd);
+	fd = do_open("file0001", O_RDWR | O_CREAT | O_TRUNC);
+	fpos=do_lseek(fd, 0, SEEK_END);
+	if(fpos!=0)
+		dbg(DBG_PRINT, "ERROR: Unexpected file position.\n");
+	do_close(fd);
+	/*o_unlink("file0001");*/
+	return 0;
+}
 
 /**
  * The init thread's function changes depending on how far along your Weenix is
@@ -300,6 +314,7 @@ initproc_run(int arg1, void *arg2)
         kshell_add_command("shtest",(kshell_cmd_func_t)sunghan_test,"sunghan's tests");
         kshell_add_command("dltest",(kshell_cmd_func_t)sunghan_deadlock_test,"sunghan's deadlock tests");
         kshell_add_command("vfstest",(kshell_cmd_func_t)my_vfstest,"vfs 506 tests");
+	kshell_add_command("selftest",(kshell_cmd_func_t)self_test,"self test");
         kshell_t *kshell = kshell_create(0);
         if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
         while (kshell_execute_next(kshell));

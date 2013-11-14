@@ -125,10 +125,6 @@ do_open(const char *filename, int oflags)
 		}
 
 	if(flag&O_APPEND) ft->f_mode|=FMODE_APPEND;
-	if(flag&O_TRUNC && (accmode&O_WRONLY || accmode&O_RDWR)){
-		ft->f_pos=0;
-		ft->f_vnode->vn_len=0;
-		}
 
 	err=open_namev(filename, flag, &res_vnode, NULL);
 	if(err<0){
@@ -161,6 +157,11 @@ do_open(const char *filename, int oflags)
 
 	ft->f_vnode=res_vnode;   
 	ft->f_pos=0;
+
+	if(flag&O_TRUNC && (accmode&O_WRONLY || accmode&O_RDWR)){
+		ft->f_pos=0;
+		ft->f_vnode->vn_len=0;
+		}
 
 	dbg(DBG_PRINT, "Successfully opened the file \"%s\".\n", filename);
 	TEST_DBG("DO_OPEN_OUT\n");
