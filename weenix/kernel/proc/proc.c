@@ -182,9 +182,12 @@ proc_cleanup(int status)
 		}list_iterate_end();
 	}
 	for(i=0;i<NFILES;i++){
+
 		if(curproc->p_files[i]!=NULL){
+			dbg(DBG_PROC,"fd %d is being closed and the vn_vno is %d\n",i, curproc->p_files[i]->f_vnode->vn_vno);
 			do_close(i);
 		}
+		
 	}
 	sched_wakeup_on(&curproc->p_pproc->p_wait);
 	KASSERT(NULL != curproc->p_pproc); /* this process should have parent process */
