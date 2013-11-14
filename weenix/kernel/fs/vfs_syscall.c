@@ -54,26 +54,30 @@ do_read(int fd, void *buf, size_t nbytes)
 
         if(fd == -1){
 		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
+		TEST_DBG("DO_READ_OUT");
 		return -EBADF;
 	}
         if((ft = fget(fd)) == NULL){
 		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
+			TEST_DBG("DO_READ_OUT");
         	return -EBADF;
 	}
         if((ft -> f_mode & FMODE_READ) != FMODE_READ){
         	fput(ft);
 		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not open for reading.\n", fd);
+				TEST_DBG("DO_READ_OUT");
                 return -EBADF;
 		}
         if(S_ISDIR(ft->f_vnode->vn_mode)){
         	fput(ft);
 		dbg(DBG_PRINT, "ERROR(fd=%d): fd refers to a directory.\n", fd);
+			TEST_DBG("DO_READ_OUT");
         	return -EISDIR;
 		}
         nb = ft -> f_vnode -> vn_ops -> read(ft -> f_vnode, ft -> f_pos, buf, nbytes);
         ft -> f_pos += nb;
         fput(ft);
-
+		TEST_DBG("DO_READ_OUT");
         return nb;
 }
 
@@ -88,20 +92,24 @@ do_read(int fd, void *buf, size_t nbytes)
 int
 do_write(int fd, const void *buf, size_t nbytes)
 {
+		TEST_DBG("DO_WRITE_IN");
         file_t *ft;
         int nb;
 
         if(fd == -1){ 
 		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
+			TEST_DBG("DO_WRITE_OUT");
 		return -EBADF;
 	}
         if((ft = fget(fd)) == NULL){
 		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
+			TEST_DBG("DO_WRITE_OUT");
         	return -EBADF;
 	}
         if((ft -> f_mode & FMODE_WRITE) != FMODE_WRITE){
                 fput(ft);
 		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not open for writing.\n", fd);
+				TEST_DBG("DO_WRITE_OUT");
                 return -EBADF;
 		}
         if((ft -> f_mode & FMODE_APPEND) == FMODE_APPEND){
@@ -116,6 +124,7 @@ do_write(int fd, const void *buf, size_t nbytes)
         ft -> f_pos += nb;
 
         fput(ft);
+		TEST_DBG("DO_WRTIE_OUT");
         return nb;        
 }
 
@@ -129,18 +138,22 @@ do_write(int fd, const void *buf, size_t nbytes)
 	int
 do_close(int fd)
 {
+	TEST_DBG("DO_CLOSE_IN");
 	file_t *ft;
 
 	if(fd == -1){ 
 		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
+		TEST_DBG("DO_CLOSE_OUT");
 		return -EBADF;
 	}
 	if((ft = fget(fd)) == NULL){
 		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
+		TEST_DBG("DO_CLOSE_OUT");
 		return -EBADF;
 	}
 	fput(ft);
 	curproc->p_files[fd]=NULL;
+	TEST_DBG("DO_CLOSE_OUT");
 	return 0;
 }
 
@@ -163,15 +176,18 @@ do_close(int fd)
 int
 do_dup(int fd)
 {
+	TEST_DBG("DO_DUP_IN");
 	file_t *ft;
 	int dupfd;
 
     	if(fd == -1){ 
 		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
+		TEST_DBG("DO_DUP_OUT");
 		return -EBADF;
 	}
     	if((ft = fget(fd)) == NULL){
 		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not a valid file descriptor.\n", fd);
+			TEST_DBG("DO_DUP_OUT");
     		return -EBADF;
 	}
 
@@ -179,10 +195,11 @@ do_dup(int fd)
 	if(dupfd < 0){
 		fput(ft);
 		dbg(DBG_PRINT, "ERROR(fd=%d): The process already has the maximum number of file descriptors open and tried to open a new one.\n", fd);
+		TEST_DBG("DO_DUP_OUT");
 		return dupfd;
 	}
 	curproc -> p_files[dupfd] = curproc -> p_files[fd];
-        
+        TEST_DBG("DO_DUP_OUT");
     	return dupfd;
 }
 
@@ -198,30 +215,35 @@ do_dup(int fd)
 int
 do_dup2(int ofd, int nfd)
 {
+	TEST_DBG("DO_DUP2_IN");
 	file_t *nft;
 
 	if(ofd == -1){
 		dbg(DBG_PRINT, "ERROR(ofd=%d): fd is not a valid file descriptor.\n", ofd);
+		TEST_DBG("DO_DUP2_OUT");
 		return -EBADF;
 	}
     	if(nfd < 0 || nfd >= NFILES){
 		dbg(DBG_PRINT, "ERROR(nfd=%d): fd is not a valid file descriptor.\n", nfd);
+			TEST_DBG("DO_DUP2_OUT");
     		return -EBADF;
 	}
 	if((nft = fget(ofd)) == NULL){
 		dbg(DBG_PRINT, "ERROR(ofd=%d): fd is not a valid file descriptor.\n", ofd);
+			TEST_DBG("DO_DUP2_OUT");
     		return -EBADF;
 	}
 
     	if(nfd == ofd){
     		fput(nft);
+			TEST_DBG("DO_DUP2_OUT");
     		return nfd;
     	}
 
     	if(curproc->p_files[nfd] != NULL)
     		do_close(nfd);
 	curproc->p_files[nfd]=curproc->p_files[ofd];
-        
+        TEST_DBG("DO_DUP2_OUT");
     	return nfd;
 }
 
@@ -253,33 +275,42 @@ do_dup2(int ofd, int nfd)
 int
 do_mknod(const char *path, int mode, unsigned devid)
 {
+	TEST_DBG("DO_MKNOD_IN");
 	size_t namelen;
 	const char *name;
 	vnode_t *dir, *result;
 	int namev_ret, lookup_ret, ret;
 
-	if(!S_ISCHR(mode) && !S_ISBLK(mode)) return -EINVAL;
-	if(strlen(path) == 0) return -EINVAL;
-	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
-
+	if((!S_ISCHR(mode) && !S_ISBLK(mode)) || strlen(path) == 0) {
+		TEST_DBG("DO_MKNOD_OUT");
+		return -EINVAL;
+	}
+	if(strlen(path) > MAXPATHLEN){
+		TEST_DBG("DO_MKNOD_OUT");
+		return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+	}
 	namev_ret = dir_namev(path, &namelen, &name, NULL, &dir);
-	if(namev_ret == -ENOENT || namev_ret == -ENOTDIR) return namev_ret;
-
+	if(namev_ret == -ENOENT || namev_ret == -ENOTDIR){
+		TEST_DBG("DO_MKNOD_OUT");
+		return namev_ret;
+	}
 	lookup_ret = lookup(dir, name, namelen, &result);
 	if(lookup_ret == -ENOTDIR){
 		vput(dir);
+		TEST_DBG("DO_MKNOD_OUT");
 		return lookup_ret;
 		}
 	if(lookup_ret == 0){
 		vput(dir);
 		vput(result);
+		TEST_DBG("DO_MKNOD_OUT");
 		return -EEXIST;        
 	}
 	KASSERT(NULL != dir->vn_ops->mknod);
 	dbg(DBG_PRINT, "(GRADING2A 3.b) The parent has mknod().\n");
 	ret = dir -> vn_ops -> mknod(dir, name, namelen, mode, devid);
 	vput(dir);
-
+	TEST_DBG("DO_MKNOD_OUT");
 	return ret;
 }
 
@@ -300,22 +331,26 @@ do_mknod(const char *path, int mode, unsigned devid)
 int
 do_mkdir(const char *path)
 {
+	TEST_DBG("DO_MKDIR_IN");
 	size_t namelen;
 	const char *name;
 	vnode_t *dir, *result;
 	int ret, lookupret;
 	int pathlen = strlen(path);
 
-	if(strlen(path) == 0)
+	if(strlen(path) == 0){
+		TEST_DBG("DO_MKDIR_OUT");
 		return -EINVAL;
+	}
 
-
-	if(strlen(path) > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
-
-	ret = dir_namev(path, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
-
-	if (ret != 0 )
+	if(strlen(path) > MAXPATHLEN){
+		TEST_DBG("DO_MKDIR_OUT");
+		return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+	}
+	if((ret = dir_namev(path, &namelen, &name, NULL, &dir)) != 0){ /* last one return the parent of base A.txt */
+		TEST_DBG("DO_MKDIR_OUT");
 		return ret;
+	}
 	/*
 	if (path[pathlen-1] == '.' && path[pathlen-2] == '.')
 	{
@@ -339,16 +374,19 @@ do_mkdir(const char *path)
 		dbg(DBG_PRINT, "(GRADING2A 3.c) The parent has mkdir().\n");
 		ret=dir->vn_ops->mkdir(dir, name, namelen);
 		vput(dir);
+		TEST_DBG("DO_MKDIR_OUT");
 		return ret;
 	}
 	else if (lookupret == 0){  /*exsit*/
 		vput(result);
 		vput(dir);
+		TEST_DBG("DO_MKDIR_OUT");
 		return -EEXIST;
 	}
 	else
 	{
 		vput(dir);
+		TEST_DBG("DO_MKDIR_OUT");
 		return lookupret;
 	}
 
@@ -375,30 +413,36 @@ do_mkdir(const char *path)
 int
 do_rmdir(const char *path)
 {
+	TEST_DBG("DO_RMDIR_IN");
 	size_t namelen;
 	const char *name;
 	vnode_t *dir;
 	int ret;
 	int pathlen = strlen(path);
 
-	if(strlen(path) == 0)
+	if(strlen(path) == 0){
+		TEST_DBG("DO_RMDIR_OUT");
 		return -EINVAL;
+	}
 
 	if(pathlen > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
 
 	ret  = dir_namev(path, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
 
-	if (ret !=0 )
+	if (ret !=0 ){
+		TEST_DBG("DO_RMDIR_OUT");
 			return ret;
-	
+	}
 	if (path[pathlen-1] == '.' && path[pathlen-2] == '.')
 	{
 		vput(dir);
+		TEST_DBG("DO_RMDIR_OUT");
 		return 	-ENOTEMPTY;
 	}
 	if (path[pathlen-1] == '.')
 	{
 		vput(dir);
+		TEST_DBG("DO_RMDIR_OUT");
 		return 	-EINVAL;
 	}
 
@@ -408,7 +452,7 @@ do_rmdir(const char *path)
 	ret=dir->vn_ops->rmdir(dir, name, namelen);
 
 	vput(dir);
-
+	TEST_DBG("DO_RMDIR_OUT");
 	return ret;
 }
 
@@ -428,6 +472,7 @@ do_rmdir(const char *path)
 int
 do_unlink(const char *path)
 {
+	TEST_DBG("DO_UNLINK_IN");
 	size_t namelen;
 	const char *name;
 	vnode_t *dir, *result;
@@ -444,15 +489,17 @@ do_unlink(const char *path)
 
 	ret  = dir_namev(path, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
 
-	if (ret !=0 )
+	if (ret !=0 ){
+		TEST_DBG("DO_UNLINK_OUT");
 			return ret;
-
+	}
 	/* cannot call rmdir since no dir will return */
 	lookupret=lookup(dir, name, namelen, &result);
 
 	if (lookupret !=0 )
 	{
 			vput(dir);
+			TEST_DBG("DO_UNLINK_OUT");
 			return lookupret;
 	}
 
@@ -460,6 +507,7 @@ do_unlink(const char *path)
 		{
 			vput(dir);
 			vput(result);
+			TEST_DBG("DO_UNLINK_OUT");
 		return -EISDIR;
 	}
 
@@ -470,7 +518,7 @@ do_unlink(const char *path)
 	ret=dir->vn_ops->unlink(dir, name, namelen);
 
 	vput(dir);
-
+	TEST_DBG("DO_UNLINK_OUT");
 	return ret;
 }
 
@@ -496,19 +544,19 @@ do_unlink(const char *path)
 int
 do_link(const char *from, const char *to)
 {
+	TEST_DBG("DO_LINK_IN");
 	size_t namelen;
 	const char *name;
 	vnode_t *fromv, *dir, *result;
 	int ret, lookupret;
 	int pathlen;
 
-	pathlen = strlen(from);
 
-	if(pathlen > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+	if(strlen(from) > MAXPATHLEN || strlen(to) > MAXPATHLEN){
+		TEST_DBG("DO_LINK_OUT");
+		return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+	}
 
-	pathlen = strlen(to);
-
-	if(pathlen > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
 
     /*diffeernt order from dir_namev */
     /*call open_namev */
@@ -516,8 +564,10 @@ do_link(const char *from, const char *to)
 	ret = open_namev(from, O_WRONLY , &fromv, NULL);
 
 
-	if (ret !=0  )
+	if (ret !=0  ){
+		TEST_DBG("DO_LINK_OUT");
 			return ret;
+	}
 	/*assume old path must exists according to linux spec*/
 
 	/*vput(fromv);*/
@@ -527,6 +577,7 @@ do_link(const char *from, const char *to)
 	if (ret !=0 )
 	{
 			vput(fromv);
+			TEST_DBG("DO_LINK_OUT");
 			return ret;
 	}
 
@@ -538,6 +589,7 @@ do_link(const char *from, const char *to)
 		ret=dir->vn_ops->link(fromv, dir, name, namelen);
 		vput(fromv);
 		vput(dir);
+		TEST_DBG("DO_LINK_OUT");
 		return ret;
 	}
 	else if (lookupret == 0) /* exist */
@@ -545,12 +597,14 @@ do_link(const char *from, const char *to)
 		vput(fromv);
 		vput(dir);
 		vput(result);
+		TEST_DBG("DO_LINK_OUT");
 		return -EEXIST;
 	}
 	else
 	{
 		vput(fromv);
 		vput(dir);
+		TEST_DBG("DO_LINK_OUT");
 		return lookupret;
 	}
 }
@@ -567,12 +621,14 @@ int
 do_rename(const char *oldname, const char *newname)
 {
 	int identifier, ret;
-
+	TEST_DBG("DO_RENAME_IN");
 	ret = do_link(oldname,newname);
-	if(ret != 0)
+	if(ret != 0){
+		TEST_DBG("DO_RENAME_OUT");
 		return ret;
+	}
 	identifier = do_unlink(oldname);
-
+	TEST_DBG("DO_RENAME_OUT");
     	return identifier;
 }
 
@@ -598,22 +654,27 @@ do_chdir(const char *path)
 	int lookup_stat, dir_stat;
 	const char *name;
 	/* res_vnode_ref = n , cur_vnode_ref = k */
- 
+
+	TEST_DBG("DO_CHDIR_IN");
 	if(strlen(path) == 0){ 
 		dbg(DBG_PRINT, "ERROR: Path is not valid.\n");
+		TEST_DBG("DO_CHDIR_OUT");
 		return -EINVAL;
 	}
 	if(strlen(path) > MAXPATHLEN){
 		dbg(DBG_PRINT, "ERROR(path=%s): Path is too long.\n", path);
+		TEST_DBG("DO_CHDIR_OUT");
 		return -ENAMETOOLONG;
 	}
 
 	if((dir_stat=dir_namev(path, &namelen , &name, NULL , &res_vnode))){
+	TEST_DBG("DO_CHDIR_OUT");
 		return dir_stat;
 	} 
  	
 	if((lookup_stat=lookup(res_vnode,name,namelen,&cur_vnode))){
 		vput(res_vnode);
+		TEST_DBG("DO_CHDIR_OUT");
 		return lookup_stat;
 	}
 	
@@ -625,8 +686,10 @@ do_chdir(const char *path)
 	}else{
 		vput(cur_vnode);
 		dbg(DBG_PRINT, "ERROR(path=%s):A component of path is not a directory.\n", path);
+		TEST_DBG("DO_CHDIR_OUT");
 		return -ENOTDIR;
 	}
+	TEST_DBG("DO_CHDIR_OUT");
 	return 0;
 }
 
@@ -648,20 +711,24 @@ do_chdir(const char *path)
 int
 do_getdent(int fd, struct dirent *dirp)
 {
+	TEST_DBG("DO_GETDENT_IN");
 	file_t *ft;
 	int offset;
 
     	if(fd == -1){
 		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not an open file descriptor.\n", fd);
+		TEST_DBG("DO_GETDENT_OUT");
 		return -EBADF;
 	}
     	if((ft = fget(fd)) == NULL){
 		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not an open file descriptor.\n", fd);
-    		return -EBADF;
+    		TEST_DBG("DO_GETDENT_OUT");
+			return -EBADF;
 	}
 
 	if(!S_ISDIR(ft->f_vnode->vn_mode)){
 		dbg(DBG_PRINT, "ERROR(fd=%d): File descriptor does not refer to a directory.\n", fd);
+		TEST_DBG("DO_GETDENT_OUT");
 		return -ENOTDIR;
 	}
 	
@@ -673,13 +740,16 @@ do_getdent(int fd, struct dirent *dirp)
 
 	if(offset==0){
 		fput(ft);
+		TEST_DBG("DO_GETDENT_OUT");
 		return 0;
 	}else if(offset > 0){
 		ft->f_pos += offset;
 		fput(ft);
+		TEST_DBG("DO_GETDENT_OUT");
 		return sizeof(dirent_t);
 	}
 	/*Should not get here*/
+	TEST_DBG("DO_GETDENT_OUT");
 	return -EINVAL;
 }
 
@@ -698,13 +768,15 @@ do_lseek(int fd, int offset, int whence)
 {
 	file_t *ft;
 	off_t tmp_pos = -1;
-
+	TEST_DBG("DO_LSEEK_IN");
 	if(fd == -1){
 		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not an open file descriptor.\n", fd);
+		TEST_DBG("DO_LSEEK_OUT");
 		return -EBADF;
 	}
 	if((ft = fget(fd)) == NULL){
 		dbg(DBG_PRINT, "ERROR(fd=%d): fd is not an open file descriptor.\n", fd);
+		TEST_DBG("DO_LSEEK_OUT");
 		return -EBADF;
 	}
 
@@ -720,17 +792,20 @@ do_lseek(int fd, int offset, int whence)
 			break;
 		default:
 			dbg(DBG_PRINT, "ERROR(fd=%d): whence is not valid.\n", fd);
+			TEST_DBG("DO_LSEEK_OUT");
 			return -EINVAL;
 			break;
 	}
 	if(tmp_pos < 0){
 		dbg(DBG_PRINT, "ERROR(fd=%d): The resulting file offset is negative.\n", fd);		
+		TEST_DBG("DO_LSEEK_OUT");
 		return -EINVAL;
 	}
 
 	ft -> f_pos = tmp_pos;
 	dbg(DBG_PRINT, "The fpos of fd=%d is moved to %d\n", fd, ft->f_pos);
 	fput(ft);
+	TEST_DBG("DO_LSEEK_OUT");
 	return tmp_pos;
 }
 
@@ -752,30 +827,35 @@ do_stat(const char *path, struct stat *buf)
 	const char *name;
 	vnode_t *dir, *result;
 	int namev_ret, lookup_ret, ret;
-
+	TEST_DBG("DO_STAT_IN");
 	if(strlen(path) == 0){ 
 		dbg(DBG_PRINT, "ERROR: Path is not valid.\n");
+		TEST_DBG("DO_STAT_OUT");
 		return -EINVAL;
 	}
 	if(strlen(path) > MAXPATHLEN){ 
 		dbg(DBG_PRINT, "ERROR(path=%s): Path is too long.\n", path);
+		TEST_DBG("DO_STAT_OUT");
 		return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
 	}
 
 	namev_ret = dir_namev(path, &namelen, &name, NULL, &dir);
-	if(namev_ret != 0)
+	if(namev_ret != 0){
+		TEST_DBG("DO_STAT_OUT");
 		return namev_ret;
-
+	}
 	lookup_ret = lookup(dir, name, namelen, &result);
 	vput(dir);
-	if(lookup_ret != 0)
+	if(lookup_ret != 0){
+		TEST_DBG("DO_STAT_OUT");
 		return lookup_ret;
-
+	}
 	KASSERT(result->vn_ops->stat);
 	dbg(DBG_PRINT, "(GRADING2A 3.f) The vnode has stat().\n");
 	ret = result->vn_ops->stat(result, buf);
 	vput(result);
 
+	TEST_DBG("DO_STAT_OUT");
 	return ret;
 }
 
