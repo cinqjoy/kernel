@@ -158,6 +158,7 @@ proc_create(char *name)
 void
 proc_cleanup(int status)
 {
+	int i=0;
 	KASSERT(NULL != proc_initproc); /* should have an "init" process */
 	dbg(DBG_PROC,"(GRADING1 2.b) The \"init\" process should not ne NULL.\n");
 	KASSERT(1 <= curproc->p_pid); /* this process should not be idle process */
@@ -181,7 +182,11 @@ proc_cleanup(int status)
 		}list_iterate_end();
 	}
 	sched_wakeup_on(&curproc->p_pproc->p_wait);
-	
+	for(i=0;i<NFILES;i++){
+		if(p_files[i]!=NULL){
+			do_close(i);
+		}
+	}
 	KASSERT(NULL != curproc->p_pproc); /* this process should have parent process */
 	dbg(DBG_PROC,"(GRADING1 2.b) This process should have parent process.\n");
 }
