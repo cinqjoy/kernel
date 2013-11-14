@@ -198,6 +198,8 @@ find:
                 init_special_vnode(vn);
 
         vn->vn_refcount = 1;
+        dbg(DBG_VNREF, "vget: recreate vnode (0x%p, 0x%p ino %ld refcount %d)\n",
+            vn, vn->vn_fs, (long)vn->vn_vno, vn->vn_refcount);
 
         return vn;
 }
