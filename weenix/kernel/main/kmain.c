@@ -282,16 +282,43 @@ my_vfstest(kshell_t *kshell, int argc, char **argv){
 
 static void *
 self_test(kshell_t *kshell, int argc, char **argv){
-	int fd, fpos;
-	fd = do_open("file0001", O_RDWR | O_CREAT);
+	
+	int fd, fd2, fpos, fpos2, ret=0;
+	/*do_open with flag 0_TRUNC*/
+	fd = do_open("file001", O_RDWR | O_CREAT);
 	do_write(fd, "selftest", 6);
 	do_close(fd);
-	fd = do_open("file0001", O_RDWR | O_CREAT | O_TRUNC);
+	fd = do_open("file001", O_RDWR | O_CREAT | O_TRUNC);
 	fpos=do_lseek(fd, 0, SEEK_END);
 	if(fpos!=0)
 		dbg(DBG_PRINT, "ERROR: Unexpected file position.\n");
 	do_close(fd);
-	/*o_unlink("file0001");*/
+
+	/* dup2 closes previous file */
+        fd = do_open("file002", O_RDWR | O_CREAT);
+	fd2 = do_open("file003", O_RDWR | O_CREAT);
+	do_write(fd2, "selftest", 6);
+	fpos=do_lseek(fd2, 0, SEEK_CUR);
+	if(fpos!=6)
+		dbg(DBG_PRINT, "ERROR: do_write does NOT work properly.\n");
+        do_dup2(fd, fd2);
+	fpos=do_lseek(fd, 0, SEEK_CUR);
+	fpos2=do_lseek(fd2, 0, SEEK_CUR);
+	if(fpos!=fpos2)
+		dbg(DBG_PRINT, "ERROR: do_dup2 does NOT work properly.\n");
+	if(fpos!=0)
+		dbg(DBG_PRINT, "ERROR: do_dup2 does NOT closes previous file.\n");
+	do_close(fd);
+	do_close(fd2);
+
+	/*ofd isn't an open file descriptor*/
+	fd = do_open("file002", O_RDWR | O_CREAT);
+	fd2 = do_open("file004", O_RDWR | O_CREAT);
+	do_close(fd);
+        ret = do_dup2(fd, fd2);
+	if(ret!=-9)
+		dbg(DBG_PRINT, "ERROR: do_dup2 does NOT work properly.\n");
+	do_close(fd2);	
 	return 0;
 }
 

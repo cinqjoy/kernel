@@ -225,7 +225,7 @@ do_dup2(int ofd, int nfd)
 		return -EBADF;
 	}
     	if(nfd < 0 || nfd >= NFILES){
-		dbg(DBG_PRINT, "ERROR(nfd=%d): fd is not a valid file descriptor.\n", nfd);
+		dbg(DBG_PRINT, "ERROR(nfd=%d): nfd is out of the allowed range for file descriptors.\n", nfd);
 			TEST_DBG("DO_DUP2_OUT\n");
     		return -EBADF;
 	}
