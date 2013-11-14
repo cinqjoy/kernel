@@ -138,6 +138,7 @@ do_open(const char *filename, int oflags)
 		return err;/* return -ENOENT */
 		}
 	if((accmode&O_WRONLY || accmode&O_RDWR) && S_ISDIR(res_vnode->vn_mode)){
+		vput(res_vnode);
 		fput(ft);
 		dbg(DBG_PRINT, "ERROR(Filename=%s): Pathname refers to a directory and the access requested involved writing.\n", filename);
 		TEST_DBG("DO_OPEN_OUT\n");
