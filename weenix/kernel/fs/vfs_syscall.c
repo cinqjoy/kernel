@@ -735,6 +735,7 @@ do_getdent(int fd, struct dirent *dirp)
 
 	if(!S_ISDIR(ft->f_vnode->vn_mode)){
 		dbg(DBG_PRINT, "ERROR(fd=%d): File descriptor does not refer to a directory.\n", fd);
+		fput(ft);
 		TEST_DBG("DO_GETDENT_OUT\n");
 		return -ENOTDIR;
 	}
