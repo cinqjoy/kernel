@@ -22,6 +22,13 @@
 #include "fs/stat.h"
 #include "util/debug.h"
 
+
+#define TEST_DBG(s)	\
+		({	\
+			dbg(DBG_PRINT, (s)); \
+		})
+
+
 /* To read a file:
  *      o fget(fd)
  *      o call its virtual read f_op
@@ -41,6 +48,7 @@
 int
 do_read(int fd, void *buf, size_t nbytes)
 {
+		TEST_DBG("DO_READ_IN");		
         file_t *ft;
         int nb;
 
