@@ -119,7 +119,7 @@ do_open(const char *filename, int oflags)
 			break;
 		default:
 			fput(ft);
-			dbg(DBG_PRINT, "ERROR(Filename=%s): Oflags is not valid.", filename);
+			dbg(DBG_PRINT, "ERROR(Filename=%s): Oflags is not valid.\n", filename);
 			TEST_DBG("DO_OPEN_OUT\n");
 			return -EINVAL;
 		}
