@@ -81,21 +81,25 @@ do_open(const char *filename, int oflags)
 	file_t *ft;
 	int fd, accmode, flag, err;
 	vnode_t *res_vnode;
+	TEST_DBG("DO_OPEN_IN\n");
 
 	if(strlen(filename) > NAME_LEN){ 
 		dbg(DBG_PRINT, "ERROR(Filename=%s): A component of filename was too long.\n", filename);
+		TEST_DBG("DO_OPEN_OUT\n");
 		return -ENAMETOOLONG;
 		}
 
 	fd=get_empty_fd(curproc);
 	if(fd<0){
 		dbg(DBG_PRINT, "ERROR(Filename=%s): Current process(pid=%d) already has the maximum number of files open.\n", filename, curproc->p_pid);
+		TEST_DBG("DO_OPEN_OUT\n");
 		return fd;/* return -EMFILE */
 	}
 
 	ft=fget(-1);
 	if(!ft){
 		dbg(DBG_PRINT, "ERROR(Filename=%s): Insufficient kernel memory was available.\n", filename);
+		TEST_DBG("DO_OPEN_OUT\n");
 		return -ENOMEM;
 	}
 	else curproc->p_files[fd]=ft;
@@ -116,6 +120,7 @@ do_open(const char *filename, int oflags)
 		default:
 			fput(ft);
 			dbg(DBG_PRINT, "ERROR(Filename=%s): Oflags is not valid.", filename);
+			TEST_DBG("DO_OPEN_OUT\n");
 			return -EINVAL;
 		}
 
@@ -129,23 +134,27 @@ do_open(const char *filename, int oflags)
 	if(err<0){
 		fput(ft);
 		dbg(DBG_PRINT, "ERROR(Filename=%s): The file a directory component in pathname does not exist.\n", filename);
+		TEST_DBG("DO_OPEN_OUT\n");
 		return err;/* return -ENOENT */
 		}
 	if((accmode&O_WRONLY || accmode&O_RDWR) && S_ISDIR(res_vnode->vn_mode)){
 		fput(ft);
 		dbg(DBG_PRINT, "ERROR(Filename=%s): Pathname refers to a directory and the access requested involved writing.\n", filename);
+		TEST_DBG("DO_OPEN_OUT\n");
 		return -EISDIR;
 		}
 	if(S_ISCHR(res_vnode->vn_mode) && !bytedev_lookup(res_vnode->vn_devid)){
 		vput(res_vnode);
 		fput(ft);
 		dbg(DBG_PRINT, "ERROR(Filename=%s): Pathname refers to a character special file and no corresponding device(id=%d) exists.\n", filename, res_vnode->vn_devid);
+		TEST_DBG("DO_OPEN_OUT\n");
 		return -ENXIO;
 		}
 	if(S_ISBLK(res_vnode->vn_mode) && !blockdev_lookup(res_vnode->vn_devid)){
 		vput(res_vnode);
 		fput(ft);
 		dbg(DBG_PRINT, "ERROR(Filename=%s): Pathname refers to a block special file and no corresponding device(id=%d) exists.\n", filename,res_vnode->vn_devid);
+		TEST_DBG("DO_OPEN_OUT\n");
 		return -ENXIO;
 		}
 
@@ -153,5 +162,6 @@ do_open(const char *filename, int oflags)
 	ft->f_pos=0;
 
 	dbg(DBG_PRINT, "Successfully opened the file \"%s\".\n", filename);
+	TEST_DBG("DO_OPEN_OUT\n");
 	return fd;
 }
