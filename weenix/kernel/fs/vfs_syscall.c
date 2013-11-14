@@ -799,12 +799,14 @@ do_lseek(int fd, int offset, int whence)
 			break;
 		default:
 			dbg(DBG_PRINT, "ERROR(fd=%d): whence is not valid.\n", fd);
+			fput(ft);
 			TEST_DBG("DO_LSEEK_OUT\n");
 			return -EINVAL;
 			break;
 	}
 	if(tmp_pos < 0){
 		dbg(DBG_PRINT, "ERROR(fd=%d): The resulting file offset is negative.\n", fd);		
+		fput(ft);
 		TEST_DBG("DO_LSEEK_OUT\n");
 		return -EINVAL;
 	}
