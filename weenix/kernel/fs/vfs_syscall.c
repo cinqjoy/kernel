@@ -425,7 +425,10 @@ do_rmdir(const char *path)
 		return -EINVAL;
 	}
 
-	if(pathlen > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+	if(pathlen > MAXPATHLEN){ 
+		TEST_DBG("DO_RMDIR_OUT");
+		return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+	}
 
 	ret  = dir_namev(path, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
 
@@ -485,8 +488,10 @@ do_unlink(const char *path)
 	if (path[pathlen-1] == '.')
 		return 	EINVAL;*/
 
-	if(pathlen > MAXPATHLEN) return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
-
+	if(pathlen > MAXPATHLEN){
+		TEST_DBG("DO_UNLINK_OUT");
+		return -ENAMETOOLONG;/* maximum size of a pathname=1024 */
+	}
 	ret  = dir_namev(path, &namelen, &name, NULL, &dir); /* last one return the parent of base A.txt */
 
 	if (ret !=0 ){
