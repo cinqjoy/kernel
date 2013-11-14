@@ -18,6 +18,11 @@
 #include "fs/stat.h"
 #include "util/debug.h"
 
+#define TEST_DBG(s)	\
+		({	\
+			dbg(DBG_PRINT, (s)); \
+		})
+
 /* find empty index in p->p_files[] */
 int
 get_empty_fd(proc_t *p)
