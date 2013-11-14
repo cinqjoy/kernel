@@ -235,6 +235,7 @@ idleproc_run(int arg1, void *arg2)
         dbg_print("weenix: vfs shutdown...\n");
         vput(curproc->p_cwd);
 		vput(init->p_cwd);
+		vnode_flush_all(vfs_root_vn->vn_fs);
         if (vfs_shutdown())
                 panic("vfs shutdown FAILED!!\n");
 
