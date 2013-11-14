@@ -181,12 +181,12 @@ proc_cleanup(int status)
 			list_insert_tail(&proc_initproc->p_children, &myProc->p_child_link);	
 		}list_iterate_end();
 	}
-	sched_wakeup_on(&curproc->p_pproc->p_wait);
 	for(i=0;i<NFILES;i++){
-		if(p_files[i]!=NULL){
+		if(curproc->p_files[i]!=NULL){
 			do_close(i);
 		}
 	}
+	sched_wakeup_on(&curproc->p_pproc->p_wait);
 	KASSERT(NULL != curproc->p_pproc); /* this process should have parent process */
 	dbg(DBG_PROC,"(GRADING1 2.b) This process should have parent process.\n");
 }
