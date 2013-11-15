@@ -102,7 +102,6 @@ do_open(const char *filename, int oflags)
 		TEST_DBG("DO_OPEN_OUT\n");
 		return -ENOMEM;
 	}
-	else curproc->p_files[fd]=ft;
 
 	accmode=oflags&0x00F;
 	flag=oflags&0xF00;
@@ -157,6 +156,7 @@ do_open(const char *filename, int oflags)
 
 	ft->f_vnode=res_vnode;   
 	ft->f_pos=0;
+	curproc->p_files[fd]=ft;
 
 	if(flag&O_TRUNC && (accmode&O_WRONLY || accmode&O_RDWR)){
 		ft->f_pos=0;
