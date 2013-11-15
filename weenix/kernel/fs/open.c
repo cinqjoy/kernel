@@ -20,7 +20,6 @@
 
 #define TEST_DBG(s)	\
 		({	\
-			dbg(DBG_PRINT, (s)); \
 		})
 
 /* find empty index in p->p_files[] */
