@@ -329,7 +329,8 @@ do_waitpid(pid_t pid, int options, int *status)
 			list_iterate_begin(&curproc->p_children,myProc,proc_t,p_child_link){
 			    KASSERT(NULL != myProc); /* the process should not be NULL */
 				if(myProc->p_state==PROC_DEAD){
-					*status = myProc->p_status;
+					if(status != NULL)
+						*status = myProc->p_status;
 					myPid = myProc->p_pid;
 					list_iterate_begin(&myProc->p_threads,myThread,kthread_t,kt_plink){
 						/* thr points to a thread to be destroied */
@@ -351,7 +352,8 @@ do_waitpid(pid_t pid, int options, int *status)
 			KASSERT(NULL != myProc); /* the process should not be NULL */
 			dbg(DBG_PROC,"(GRADING1 2.c) The process should be in the process list.\n");
 			if(myProc->p_state==PROC_DEAD){
-				*status = myProc->p_status;
+				if(status != NULL)
+					*status = myProc->p_status;
 				myPid = myProc->p_pid;
 				list_iterate_begin(&myProc->p_threads,myThread,kthread_t,kt_plink){
 					/* thr points to a thread to be destroied */
