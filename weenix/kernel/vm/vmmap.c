@@ -58,8 +58,12 @@ vmarea_free(vmarea_t *vma)
 vmmap_t *
 vmmap_create(void)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_create");
-        return NULL;
+	vmmap_t * vmmp = (vmmap_t *) slab_obj_alloc(vmmap_allocator);
+	if(vmmp){
+		list_init(vmmp->vmm_list);
+		vmmp->vmm_proc = NULL;
+	}
+	return vmmp;
 }
 
 /* Removes all vmareas from the address space and frees the
@@ -67,7 +71,18 @@ vmmap_create(void)
 void
 vmmap_destroy(vmmap_t *map)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_destroy");
+	vmarea_t * vma;
+	list_link_t *link;
+	list_link_t *next;
+	list_iterate_begin(map->vmm_list,vma,vmarea_t,vma_plink){
+		/*
+		 * does the vmobj need to be free?
+		 * Should I call vmobj->put();
+		 */
+		vma->vma_obj->mmo_ops->put(vma->vma_obj);
+		vmarea_free(vma);
+	}list_iterate_end();
+    slab_obj_free(vmmap_allocator, map);
 }
 
 /* Add a vmarea to an address space. Assumes (i.e. asserts to some extent)
@@ -77,7 +92,17 @@ vmmap_destroy(vmmap_t *map)
 void
 vmmap_insert(vmmap_t *map, vmarea_t *newvma)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_insert");
+	/* assert vmarea is valid */
+	vmarea_t * vma;
+	newvma->vma_vmmap = map;
+	list_iterate_begin(map->vmm_list,vma,vmarea_t,vma_plink){
+		if(vma->vma_start > newvma->vma_start){
+			list_insert_before(vma->vma_plink,newvma->vma_plink);
+			return;
+		}
+	}list_iterate_end();
+	list_insert_tail(map->vmm_list, newvma->vma_plink);
+
 }
 
 /* Find a contiguous range of free virtual pages of length npages in
@@ -90,8 +115,36 @@ vmmap_insert(vmmap_t *map, vmarea_t *newvma)
 int
 vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_find_range");
-        return -1;
+	vmarea_t *vma;
+	uint32_t hi = 0xffffffff; /* the range of virtual memory of each process should */
+	uint32_t lo = 0x00000000; /* be fetched by certain MACRO */
+	switch(dir){
+		case VMMAP_DIR_HILO:
+			list_iterate_reverse(map->vmm_list,vma,vmarea_t,vma_plink){
+				lo = vma->vma_end;
+				if((hi-lo) > npages)
+					return lo;
+				hi = vma->vma_start;
+			}list_iterate_end();
+			lo = 0x00000000;
+			if((hi-lo) > npages)
+				return lo;
+			break;
+		case VMMAP_DIR_LOHI:
+			list_iterate_begin(map->vmm_list,vma,vmarea_t,vma_plink){
+				hi = vma->vma_start;
+				if((hi-lo) > npages)
+					return lo;
+				lo = vma->vma_end;
+			}list_iterate_end();
+			hi = 0xffffffff;
+			if((hi-lo) > npages)
+				return lo;
+			break;
+		default:
+			return -1;
+	}
+	return -1;
 }
 
 /* Find the vm_area that vfn lies in. Simply scan the address space
@@ -100,8 +153,12 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 vmarea_t *
 vmmap_lookup(vmmap_t *map, uint32_t vfn)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_lookup");
-        return NULL;
+	vmarea_t * vma;
+	list_iterate_begin(map->vmm_list,vma,vmarea_t,vma_plink){
+		if(vma->vma_start <= vfn && vfn <= vma->vma_end)
+			return vma;
+	}list_iterate_end();
+	return NULL;
 }
 
 /* Allocates a new vmmap containing a new vmarea for each area in the
