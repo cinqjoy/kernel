@@ -93,11 +93,14 @@ void
 vmmap_insert(vmmap_t *map, vmarea_t *newvma)
 {
 	/* assert vmarea is valid */
+	/* newvma->vma_obj cannot be NULL */
+
 	vmarea_t * vma;
 	newvma->vma_vmmap = map;
 	list_iterate_begin(map->vmm_list,vma,vmarea_t,vma_plink){
 		if(vma->vma_start > newvma->vma_start){
 			list_insert_before(vma->vma_plink,newvma->vma_plink);
+			list_insert_tail(mmobj_bottom_vmas(newvma->vma_obj),newvma->vma_olink);
 			return;
 		}
 	}list_iterate_end();
@@ -237,8 +240,50 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 int
 vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_remove");
-        return -1;
+	vmarea_t *vma;
+	uint32_t lo = lopage;
+	uint32_t hi = lopage+npages-1;
+	uint32_t tmp;
+	list_iterate_begin(map->vmm_list,vma,vmarea_t,vma_plink){
+		if((lo <= vma->vma_start) &&
+				(hi < vma->vma_end)){
+			/*case 3*/
+			vma->vma_off += hi-vma->vma_start+1;
+			vma->vma_start = hi+1;
+			return 0;
+
+		}else if((lo <= vma->vma_start) &&
+				(hi >= vma->vma_end)){
+			/*case 4*/
+			lo = vma->vma_end+1;
+			vmarea_free(vma);
+
+		}else if((lo > vma->vma_start) &&
+				(hi < vma->vma_end)){
+			/*case 1(split)*/
+			vmarea_t * newvma = vmarea_alloc();
+			newvma->vma_off = vma->vma_off + (hi-vma->vma_start+1);
+			newvma->vma_start = hi+1;
+			newvma->vma_end = vma->vma_end;
+			vma->vma_end = lo-1;
+
+			vma->vma_obj->mmo_refcount++;
+			newvma->vma_obj = vma->vma_obj;
+
+			vmmap_insert(map,newvma);
+			return 0;
+
+		}else if((lo > vma->vma_start) &&
+				(hi >= vma->vma_end)){
+			/*case 2*/
+			tmp = vma->vma_end;
+			vma->vma_end = lo-1;
+			lo = tmp+1;
+
+		}else{
+			/*no match*/
+		}
+	}list_iterate_end();
 }
 
 /*
@@ -248,8 +293,25 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 int
 vmmap_is_range_empty(vmmap_t *map, uint32_t startvfn, uint32_t npages)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_is_range_empty");
-        return 0;
+	/*
+	 * The pages in designated range should all be mapped or
+	 * only if one page had been mapped, we should return 0.
+	 */
+
+	/* assert npages != 0 */
+
+	vmarea_t *vma;
+	uint32_t hi = startvfn+npages-1;
+	uint32_t lo = startvfn;
+
+	list_iterate_begin(map->vmm_list,vma,vmarea_t,vma_plink){
+		if(((vma->vma_start <= lo) && (lo <= vma->vma_end)) ||   /* lo is inside a vmarea */
+				((vma->vma_start <= hi) && (hi <= vma->vma_end)) || /* hi is inside a vmarea */
+				((lo < vma->vma_start) && (vma->vma_end < hi))){ /* vmarea is in side the range we specified */
+			return 0;
+		}
+	}list_iterate_end();
+	return 1;
 }
 
 /* Read into 'buf' from the virtual address space of 'map' starting at
