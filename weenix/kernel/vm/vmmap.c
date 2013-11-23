@@ -119,8 +119,9 @@ int
 vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 {
 	vmarea_t *vma;
-	uint32_t hi = 0xffffffff; /* the range of virtual memory of each process should */
-	uint32_t lo = 0x00000000; /* be fetched by certain MACRO */
+	/* the maximum entry of the pagetable, page number */
+	uint32_t hi = PAGE_SIZE/sizeof (uint32_t) - 1;
+	uint32_t lo = 0;
 	switch(dir){
 		case VMMAP_DIR_HILO:
 			list_iterate_reverse(map->vmm_list,vma,vmarea_t,vma_plink){
@@ -129,7 +130,7 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 					return lo;
 				hi = vma->vma_start;
 			}list_iterate_end();
-			lo = 0x00000000;
+			lo = 0x0;
 			if((hi-lo) > npages)
 				return lo;
 			break;
@@ -140,7 +141,7 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 					return lo;
 				lo = vma->vma_end;
 			}list_iterate_end();
-			hi = 0xffffffff;
+			hi = PAGE_SIZE/sizeof (uint32_t) - 1;
 			if((hi-lo) > npages)
 				return lo;
 			break;
