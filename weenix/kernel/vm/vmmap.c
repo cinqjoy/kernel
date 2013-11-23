@@ -60,7 +60,7 @@ vmmap_create(void)
 {
 	vmmap_t * vmmp = (vmmap_t *) slab_obj_alloc(vmmap_allocator);
 	if(vmmp){
-		list_init(vmmp->vmm_list);
+		list_init(&vmmp->vmm_list);
 		vmmp->vmm_proc = NULL;
 	}
 	return vmmp;
@@ -74,7 +74,7 @@ vmmap_destroy(vmmap_t *map)
 	vmarea_t * vma;
 	list_link_t *link;
 	list_link_t *next;
-	list_iterate_begin(map->vmm_list,vma,vmarea_t,vma_plink){
+	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
 		/*
 		 * does the vmobj need to be free?
 		 * Should I call vmobj->put();
@@ -95,13 +95,13 @@ vmmap_insert(vmmap_t *map, vmarea_t *newvma)
 	/* assert vmarea is valid */
 	vmarea_t * vma;
 	newvma->vma_vmmap = map;
-	list_iterate_begin(map->vmm_list,vma,vmarea_t,vma_plink){
+	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
 		if(vma->vma_start > newvma->vma_start){
-			list_insert_before(vma->vma_plink,newvma->vma_plink);
+			list_insert_before(&vma->vma_plink,&newvma->vma_plink);
 			return;
 		}
 	}list_iterate_end();
-	list_insert_tail(map->vmm_list, newvma->vma_plink);
+	list_insert_tail(&map->vmm_list, &newvma->vma_plink);
 
 }
 
@@ -120,7 +120,7 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 	uint32_t lo = 0x00000000; /* be fetched by certain MACRO */
 	switch(dir){
 		case VMMAP_DIR_HILO:
-			list_iterate_reverse(map->vmm_list,vma,vmarea_t,vma_plink){
+			list_iterate_reverse(&map->vmm_list,vma,vmarea_t,vma_plink){
 				lo = vma->vma_end;
 				if((hi-lo) > npages)
 					return lo;
@@ -131,7 +131,7 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 				return lo;
 			break;
 		case VMMAP_DIR_LOHI:
-			list_iterate_begin(map->vmm_list,vma,vmarea_t,vma_plink){
+			list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
 				hi = vma->vma_start;
 				if((hi-lo) > npages)
 					return lo;
@@ -154,7 +154,7 @@ vmarea_t *
 vmmap_lookup(vmmap_t *map, uint32_t vfn)
 {
 	vmarea_t * vma;
-	list_iterate_begin(map->vmm_list,vma,vmarea_t,vma_plink){
+	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
 		if(vma->vma_start <= vfn && vfn <= vma->vma_end)
 			return vma;
 	}list_iterate_end();
