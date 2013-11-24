@@ -342,7 +342,7 @@ initproc_run(int arg1, void *arg2)
 		char *envp[] = {NULL};
 		kernel_execve("/usr/bin/mmt",argv,envp);
 
-
+/*
         kshell_add_command("testproc",(kshell_cmd_func_t)testproc,"Ted Faber's tests");
         kshell_add_command("shtest",(kshell_cmd_func_t)sunghan_test,"sunghan's tests");
         kshell_add_command("dltest",(kshell_cmd_func_t)sunghan_deadlock_test,"sunghan's deadlock tests");
@@ -353,7 +353,7 @@ initproc_run(int arg1, void *arg2)
         if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
         while (kshell_execute_next(kshell));
         kshell_destroy(kshell);
-		
+*/		
         return NULL;
 }
 
