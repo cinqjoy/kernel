@@ -119,7 +119,7 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 {
 	vmarea_t *vma;
 	/* the maximum entry of the pagetable, page number */
-	uint32_t hi = PAGE_SIZE/sizeof (uint32_t) - 1;
+	uint32_t hi = 0xfffff/sizeof (uint32_t) - 1;
 	uint32_t lo = 0;
 	switch(dir){
 		case VMMAP_DIR_HILO:
@@ -140,7 +140,7 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 					return lo;
 				lo = vma->vma_end;
 			}list_iterate_end();
-			hi = PAGE_SIZE/sizeof (uint32_t) - 1;
+			hi = 0xfffff/sizeof (uint32_t) - 1;
 			if((hi-lo) > npages)
 				return lo;
 			break;
@@ -204,8 +204,65 @@ int
 vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
           int prot, int flags, off_t off, int dir, vmarea_t **new)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_map");
-        return -1;
+
+			int vfn;
+			mmobj_t * anon_obj;
+			mmobj_t * new_obj;
+			proc_t * p = map->vmm_proc;
+	
+			
+			if (lopage == 0)
+			{
+				if ((vfn = vmmap_find_range(map, npages, dir)) == -1)
+				{
+					/*?? return  error message if no any virtual address available--------------------*/
+					return -ENOMEM;
+				}
+				
+			}
+			else
+			{
+				if (!vmmap_is_range_empty(map, lopage, npages))
+					vmmap_remove(map, lopage, npages);			
+				vfn = lopage;
+			}
+	
+			/* assgin content to vmarea */
+			*new = vmarea_alloc();
+			(*new)->vma_start = vfn;
+			(*new)->vma_end = vfn+npages;
+			(*new)->vma_prot = prot;
+			(*new)->vma_flags = flags;
+			(*new)->vma_off = off;
+	
+			/* assume anaomous objects ,each vmarea needs to have one */
+			if (file==NULL)
+			{
+			  anon_obj = anon_create();
+			  (*new)->vma_obj = anon_obj;
+			  /*file->vn_ops->create()*/
+			}
+			else
+			{
+				if (flags ==MAP_PRIVATE)
+				{
+					/*	shadow object	*/	
+				}
+				else
+					file->vn_ops->mmap(file, *new, &new_obj);
+				
+				
+			}
+	
+			/*list_init(&(*new)->vma_olink);
+			list_init(&(*new)->vma_plink);
+			list_t			  mmo_vmas;*/
+			/* assign plink  */
+			vmmap_insert(map, *new);
+
+			return 0;	
+
+
 }
 
 /*
@@ -326,8 +383,72 @@ vmmap_is_range_empty(vmmap_t *map, uint32_t startvfn, uint32_t npages)
 int
 vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_read");
-        return 0;
+
+		size_t remainsize = count;
+		vmarea_t *vma;
+		struct pframe *pf;
+		/* ------assume vaddr is 32 bits not ust 20 bits  -------*/
+		uintptr_t vmaaddr = ADDR_TO_PN((* (uintptr_t*)vaddr));
+
+		
+		list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
+			if((vma->vma_start <= vmaaddr) && (vmaaddr <= vma->vma_end)  && (remainsize!=0) )
+			{
+				size_t size;
+				/*uint32_t v_pdindex;
+				uint32_t v_ptindex;
+				uint32_t pagenum;
+				uint32_t *pt_vaddr;				
+				uint32_t ppage_paddr;*/								
+				uint32_t pagenum;
+				/* ----- assume size is small than one page size 4KB -------*/
+				/*if ( (remainsize <=PAGE_SIZE)
+				{
+					size = remainsize;
+				}
+				else
+				{
+					size = PAGE_SIZE;
+					reminisize -= size;
+				}*/
+				size = remainsize;
+
+				/*v_pdindex = (((*(uint32_t *)(vaddr)) >> PAGE_SHIFT) / (PAGE_SIZE / sizeof (uint32_t)));
+				v_ptindex = (((*(uint32_t *)(vaddr)) >> PAGE_SHIFT) % (PAGE_SIZE / sizeof (uint32_t)));
+
+
+				pd = map->vmm_proc->p_pagedir;
+				pt_vaddr = pd->pd_virtual[v_pdindex];
+				ppage_paddr =pt_vaddr[v_ptindex];*/
+				
+				pagenum =  ((*(uint32_t *)(vaddr)) >> PAGE_SHIFT) - vma->vma_start + vma->vma_off;
+
+
+				
+				/*--read so don't care forwrite mode, assign = 1--*/	
+				if (!vma->vma_obj->mmo_ops->lookuppage(vma->vma_obj, pagenum, 0, &pf)) /* success */
+				{
+
+
+						memcpy(buf, pf->pf_addr, size);
+						
+						/*return v->vn_ops->fillpage(v, (int)PN_TO_ADDR(pf->pf_pagenum), pf->pf_addr);*/
+						/*return v->vn_ops->fillpage(v, (int)PN_TO_ADDR(pf->pf_pagenum), pf->pf_addr);*/					
+						/*map->vmm_proc->p_pagedir->pd_virtual[pdindex] 
+						ppaddr = uintptr_t pt_virt_to_phys((uintptr_t) (*pf->pf_addr));*/
+					
+				}
+				else
+					return -EFAULT;
+			
+			}
+			
+		}list_iterate_end();
+
+
+		return 0;
+
+
 }
 
 /* Write from 'buf' into the virtual address space of 'map' starting at
@@ -341,8 +462,59 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 int
 vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_write");
-        return 0;
+	size_t remainsize = count;
+	vmarea_t *vma;
+	struct pframe *pf;
+	/* ------assume vaddr is 32 bits not ust 20 bits  -------*/
+	uintptr_t vmaaddr = ADDR_TO_PN((* (uintptr_t*)vaddr));
+	
+	
+	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
+		if((vma->vma_start <= vmaaddr) && (vmaaddr <= vma->vma_end)  && (remainsize!=0) )
+		{
+			size_t size;
+			/*uint32_t v_pdindex;
+			uint32_t v_ptindex;
+			uint32_t *pt_vaddr;				
+			uint32_t ppage_paddr;*/
+			uint32_t pagenum;
+			/* ----- assume size is small than one page size 4KB -------*/
+			/*if ( (remainsize <=PAGE_SIZE)
+			{
+				size = remainsize;
+			}
+			else
+			{
+				size = PAGE_SIZE;
+				reminisize -= size;
+			}*/
+			size = remainsize;
+	
+			/*v_pdindex = (((*(uint32_t *)(vaddr)) >> PAGE_SHIFT) / (PAGE_SIZE / sizeof (uint32_t)));
+			v_ptindex = (((*(uint32_t *)(vaddr)) >> PAGE_SHIFT) % (PAGE_SIZE / sizeof (uint32_t)));
+	
+			pt_vaddr = (uint32_t *)(map->vmm_proc->p_pagedir->pd_virtual[v_pdindex]);
+			ppage_paddr =pt_vaddr[v_ptindex];*/
+			
+			pagenum =  ((*(uint32_t *)(vaddr)) >> PAGE_SHIFT) - vma->vma_start + vma->vma_off;
+
+			
+			/*--read so don't care forwrite mode, assign = 1--*/	
+			if (!vma->vma_obj->mmo_ops->lookuppage(vma->vma_obj, pagenum, 1, &pf)) /* success */
+			{
+	
+
+					memcpy(pf->pf_addr, buf, size);				
+			}
+			else
+				return -EFAULT;
+		
+		}
+		
+	}list_iterate_end();
+	
+	
+	return 0;
 }
 
 /* a debugging routine: dumps the mappings of the given address space. */
