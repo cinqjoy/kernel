@@ -56,12 +56,9 @@ anon_create()
         /*NOT_YET_IMPLEMENTED("VM: anon_create");*/
 	mmobj_t *myAnon;
 	myAnon = (mmobj_t*)slab_obj_alloc(anon_allocator);
-	myAnon->mmo_ops = &anon_mmobj_ops;
-	myAnon->mmo_refcount = 1;
-	myAnon->mmo_nrespages = 0;
-	list_init(&myAnon->mmo_respages);
-	list_init(&myAnon->mmo_vmas);
-        return myAnon;
+        mmobj_init(myAnon, &anon_mmobj_ops);
+	myAnon->mmo_refcount++;
+	return myAnon;
 }
 
 /* Implementation of mmobj entry points: */
@@ -74,7 +71,7 @@ anon_ref(mmobj_t *o)
 {
         /*NOT_YET_IMPLEMENTED("VM: anon_ref");*/
 	/* add KAASSERT to check whether the mmobj is anonymous*/
-	o->mmo-refcount++;
+	o->mmo_refcount++;
 }
 
 /*
@@ -90,13 +87,13 @@ anon_put(mmobj_t *o)
 {
         /*NOT_YET_IMPLEMENTED("VM: anon_put");*/
 	/* add KAASSERT to check whether the mmobj is anonymous and whether the refcount is ess the number of resident pages*/
-	pframe *myFrame;
+	pframe_t *myFrame;
 	/*o->refcount--;*/
 	o->mmo_ops->put(o);
-	if(o->refcount==o->mmo_nrespages){
-		list_iterate_begin(&o->mmo_respages, myFrame, pframe, pf_olink) {
-			while(pframe_is_pin(myFrame)){
-				pframe_unpin(&myFrame);
+	if(o->mmo_refcount==o->mmo_nrespages){
+		list_iterate_begin(&o->mmo_respages, myFrame, pframe_t, pf_olink) {
+			while(pframe_is_pinned(myFrame)){
+				pframe_unpin(myFrame);
 			}
 			if(pframe_is_busy(myFrame)){
 				sched_sleep_on(&myFrame->pf_waitq);
@@ -117,8 +114,8 @@ static int
 anon_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 {
         /*NOT_YET_IMPLEMENTED("VM: anon_lookuppage");*/
-	pframe *myFrame;
-	list_iterate_begin(&o->mmo_respages, myFrame, pframe, pf_olink) {
+	pframe_t *myFrame;
+	list_iterate_begin(&o->mmo_respages, myFrame, pframe_t, pf_olink) {
         	if(myFrame->pf_pagenum == pagenum){
 			*pf = myFrame;
 			return 0;	
@@ -134,7 +131,7 @@ static int
 anon_fillpage(mmobj_t *o, pframe_t *pf)
 {
         /*NOT_YET_IMPLEMENTED("VM: anon_fillpage");*/
-	pframe *myFrame;
+	pframe_t *myFrame;
 	if((o==pf->pf_obj)){
 		myFrame = pframe_get_resident(pf->pf_obj,pf->pf_pagenum);
 		if(myFrame!=NULL){
@@ -163,7 +160,7 @@ static int
 anon_cleanpage(mmobj_t *o, pframe_t *pf)
 {
         /*NOT_YET_IMPLEMENTED("VM: anon_cleanpage");*/
-	pframe *myFrame;
+	pframe_t *myFrame;
 	if((o==pf->pf_obj)){
 		myFrame = pframe_get_resident(pf->pf_obj,pf->pf_pagenum);
 		if(myFrame!=NULL){
