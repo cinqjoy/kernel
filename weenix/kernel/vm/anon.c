@@ -41,7 +41,7 @@ anon_init()
 {
         /*NOT_YET_IMPLEMENTED("VM: anon_init");*/
 	anon_allocator = slab_allocator_create("anonobj", sizeof(mmobj_t));
-	KASSERT(NULL != vmmap_allocator && "failed to create anonobj allocator!");
+	KASSERT(NULL != anon_allocator && "failed to create anonobj allocator!");
 }
 
 /*
@@ -56,7 +56,7 @@ anon_create()
         /*NOT_YET_IMPLEMENTED("VM: anon_create");*/
 	mmobj_t *myAnon;
 	myAnon = (mmobj_t*)slab_obj_alloc(anon_allocator);
-	*myAnon->mmo_ops = &anon_mmobj_ops;
+	myAnon->mmo_ops = &anon_mmobj_ops;
 	myAnon->mmo_refcount = 1;
 	myAnon->mmo_nrespages = 0;
 	list_init(&myAnon->mmo_respages);
