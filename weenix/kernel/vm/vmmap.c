@@ -209,6 +209,7 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 			mmobj_t * anon_obj;
 			mmobj_t * new_obj;
 			proc_t * p = map->vmm_proc;
+			vmarea_t * new_vmarea = NULL;
 	
 			
 			if (lopage == 0)
@@ -228,18 +229,18 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 			}
 	
 			/* assgin content to vmarea */
-			*new = vmarea_alloc();
-			(*new)->vma_start = vfn;
-			(*new)->vma_end = vfn+npages;
-			(*new)->vma_prot = prot;
-			(*new)->vma_flags = flags;
-			(*new)->vma_off = off;
+			new_vmarea = vmarea_alloc();
+			new_vmarea->vma_start = vfn;
+			new_vmarea->vma_end = vfn+npages;
+			new_vmarea->vma_prot = prot;
+			new_vmarea->vma_flags = flags;
+			new_vmarea->vma_off = off;
 	
 			/* assume anaomous objects ,each vmarea needs to have one */
 			if (file==NULL)
 			{
 			  anon_obj = anon_create();
-			  (*new)->vma_obj = anon_obj;
+			  new_vmarea->vma_obj = anon_obj;
 			  /*file->vn_ops->create()*/
 			}
 			else
@@ -249,7 +250,7 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 					/*	shadow object	*/	
 				}
 				else
-					file->vn_ops->mmap(file, *new, &new_obj);
+					file->vn_ops->mmap(file, new_vmarea, &new_obj);
 				
 				
 			}
@@ -258,10 +259,13 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 			list_init(&(*new)->vma_plink);
 			list_t			  mmo_vmas;*/
 			/* assign plink  */
-			vmmap_insert(map, *new);
+			vmmap_insert(map, new_vmarea);
+
+
+			if (new != NULL)
+				*new = new_vmarea; 
 
 			return 0;	
-
 
 }
 
