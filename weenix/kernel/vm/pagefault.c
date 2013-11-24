@@ -54,7 +54,7 @@ handle_pagefault(uintptr_t vaddr, uint32_t cause)
 	uint32_t pdflags=0, ptflags=0;
         /* find the vmarea */
 	vmarea_t *vmarea;
-	if((vmarea=vmmap_lookup(curproc->p_vmmap,ADDR_TO_PN(vaddr))==NULL){
+	if((vmarea=vmmap_lookup(curproc->p_vmmap,ADDR_TO_PN(vaddr)))==NULL){
 		proc_kill(curproc,-EFAULT);
 		return;
 	}
@@ -65,12 +65,20 @@ handle_pagefault(uintptr_t vaddr, uint32_t cause)
 		 || ((cause&FAULT_EXEC)&&!(vmarea->vma_prot&PROT_EXEC))){
 			proc_kill(curproc,-EFAULT);
 			return;
-	}	
+		}	
+	}
 
 	/* find the vmarea(remember shadow obj), search for correct page */
 	pframe_t *pf;
-	if(pframe_get(vmarea->vma_obj,,pf)<0){
-		return;
+	if(vmarea->vma_flags&MAP_PRIVATE){
+		if(vmarea->vma_obj->mmo_ops->lookuppage(vmarea->vma_obj,ADDR_TO_PN(vaddr)-vmarea->vma_start+vmarea->vma_off,cause&FAULT_WRITE,&pf)<0){
+			return;
+		}
+	}
+	else{
+		if(pframe_get(vmarea->vma_obj,ADDR_TO_PN(vaddr)-vmarea->vma_start+vmarea->vma_off,&pf)<0){
+			return;
+		}
 	}
 	
 	if(cause&FAULT_WRITE){
@@ -79,7 +87,6 @@ handle_pagefault(uintptr_t vaddr, uint32_t cause)
 	}
 
 	/* call pt_map */
-	uintptr_t paddr=pt_virt_to_phys(pf->pf_addr);
-	paddr=PAGE_ALIGN_DOWN(paddr);
-	pt_map(curporc->p_pagedir,PAGE_ALIGN_DOWN(vaddr),paddr,pdflags|PD_PRESENT|PD_USER,ptflags|PT_PRESENT|PT_USER);
+	uintptr_t paddr=(uintptr_t)PAGE_ALIGN_DOWN(pt_virt_to_phys((uintptr_t)pf->pf_addr));
+	pt_map(curproc->p_pagedir,(uintptr_t)PAGE_ALIGN_DOWN(vaddr),paddr,pdflags|PD_PRESENT|PD_USER,ptflags|PT_PRESENT|PT_USER);
 }
