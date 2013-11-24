@@ -51,5 +51,35 @@
 void
 handle_pagefault(uintptr_t vaddr, uint32_t cause)
 {
-        NOT_YET_IMPLEMENTED("VM: handle_pagefault");
+	uint32_t pdflags=0, ptflags=0;
+        /* find the vmarea */
+	vmarea_t *vmarea;
+	if((vmarea=vmmap_lookup(curproc->p_vmmap,ADDR_TO_PN(vaddr))==NULL){
+		proc_kill(curproc,-EFAULT);
+		return;
+	}
+
+	/* check the permissions on the area */	
+	if(!(cause&FAULT_PRESENT)){
+		if(((cause&FAULT_WRITE)&&!(vmarea->vma_prot&PROT_WRITE)) || ((cause&FAULT_RESERVED)&&!(vmarea->vma_prot&PROT_NONE))
+		 || ((cause&FAULT_EXEC)&&!(vmarea->vma_prot&PROT_EXEC))){
+			proc_kill(curproc,-EFAULT);
+			return;
+	}	
+
+	/* find the vmarea(remember shadow obj), search for correct page */
+	pframe_t *pf;
+	if(pframe_get(vmarea->vma_obj,,pf)<0){
+		return;
+	}
+	
+	if(cause&FAULT_WRITE){
+		pdflags=PD_WRITE;
+		ptflags=PT_WRITE;
+	}
+
+	/* call pt_map */
+	uintptr_t paddr=pt_virt_to_phys(pf->pf_addr);
+	paddr=PAGE_ALIGN_DOWN(paddr);
+	pt_map(curporc->p_pagedir,PAGE_ALIGN_DOWN(vaddr),paddr,pdflags|PD_PRESENT|PD_USER,ptflags|PT_PRESENT|PT_USER);
 }
