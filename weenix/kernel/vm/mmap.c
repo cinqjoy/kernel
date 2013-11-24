@@ -34,8 +34,8 @@ int
 do_mmap(void *addr, size_t len, int prot, int flags,
         int fd, off_t off, void **ret)
 {
-	file_t ft;
-	vnode_t vn;
+	file_t *ft;
+	vnode_t *vn;
 	int i;
 
 
@@ -52,19 +52,27 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	 * ENFILE The system limit on the total number of open files
 	 *        has been reached.
 	 */
-    for (i = 0; i < NFILES; i++)
-    	if (!curproc->p_files[i]) break;
+    for (i = 0; i < NFILES; i++){
+    	if (!curproc->p_files[i]){
+			break;
+		}
+	}
     if(i == NFILES) return -ENFILE;
 
 
-	if(fd == -1) vn = NULL;
-	else if((ft = fget(fd)) == NULL) vn = NULL;
-	else vn = ft->f_vnode;
+	if(fd == -1){
+		vn = NULL;
+	}else if((ft = fget(fd)) == NULL){
+		vn = NULL;
+	}else{
+		vn = ft->f_vnode;
+	}
 
-	if(vn == NULL)
+	if(vn == NULL){
 		/* EBADF  fd is not a valid file descriptor (and MAP_ANONYMOUS was not set). */
-		if(!(flags & MAP_ANON == MAP_ANON))
+		if(!((flags & MAP_ANON) == MAP_ANON))
 			return -EBADF;
+	}
 	/*
 	 * EACCES A file descriptor refers to a non-regular file.  Or
 	 *        MAP_PRIVATE was requested, but fd is not open for reading.  Or
@@ -72,7 +80,7 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	 *        open in read/write (O_RDWR) mode.  Or PROT_WRITE is set, but
 	 *        the file is append-only.
 	 */
-	else if(!S_ISREG(vn->vn_mode) ||
+	else if(!((vn->vn_mode & 0xFF00) == 0x0800) ||
 			((flags & MAP_PRIVATE) == MAP_PRIVATE && (ft -> f_mode & FMODE_READ) != FMODE_READ) ||
 			(((flags & MAP_SHARED) == MAP_SHARED) && ((prot & PROT_WRITE) == PROT_WRITE) &&
 					!((ft->f_mode & (FMODE_READ|FMODE_WRITE)) == (FMODE_READ|FMODE_WRITE))) ||
@@ -101,7 +109,7 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	 *        mappings would have been exceeded.
 	 * This error should return by vmmap
 	 */
-	return vmmap_map(curproc->p_vmmap, vn, addr, len, prot, flags, off, VMMAP_DIR_LOHI, ret);
+	return vmmap_map(curproc->p_vmmap, vn, (uint32_t)addr, (uint32_t)len, prot, flags, off, VMMAP_DIR_LOHI, (vmarea_t **)ret);
 }
 
 
@@ -119,7 +127,7 @@ do_munmap(void *addr, size_t len)
 
 	if(len <= 0 || len > PAGE_SIZE/sizeof(uint32_t)) return -EINVAL;
 
-	return vmmap_remove(curproc->p_vmmap, addr, len);
+	return vmmap_remove(curproc->p_vmmap, (uint32_t)addr, len);
 
 }
 

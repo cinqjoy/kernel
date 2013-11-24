@@ -244,7 +244,7 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 	uint32_t lo = lopage;
 	uint32_t hi = lopage+npages-1;
 	uint32_t tmp;
-	list_iterate_begin(map->vmm_list,vma,vmarea_t,vma_plink){
+	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
 		if((lo <= vma->vma_start) &&
 				(hi < vma->vma_end)){
 			/*case 3*/
@@ -284,6 +284,7 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 			/*no match*/
 		}
 	}list_iterate_end();
+	return 0;
 }
 
 /*
@@ -304,7 +305,7 @@ vmmap_is_range_empty(vmmap_t *map, uint32_t startvfn, uint32_t npages)
 	uint32_t hi = startvfn+npages-1;
 	uint32_t lo = startvfn;
 
-	list_iterate_begin(map->vmm_list,vma,vmarea_t,vma_plink){
+	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
 		if(((vma->vma_start <= lo) && (lo <= vma->vma_end)) ||   /* lo is inside a vmarea */
 				((vma->vma_start <= hi) && (hi <= vma->vma_end)) || /* hi is inside a vmarea */
 				((lo < vma->vma_start) && (vma->vma_end < hi))){ /* vmarea is in side the range we specified */
