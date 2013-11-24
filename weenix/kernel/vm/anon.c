@@ -114,14 +114,20 @@ static int
 anon_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 {
         /*NOT_YET_IMPLEMENTED("VM: anon_lookuppage");*/
-	pframe_t *myFrame;
+/*	pframe_t *myFrame;
 	list_iterate_begin(&o->mmo_respages, myFrame, pframe_t, pf_olink) {
         	if(myFrame->pf_pagenum == pagenum){
 			*pf = myFrame;
 			return 0;	
 		}
         } list_iterate_end();
-
+*/	
+	if(forwrite==1){
+		return -EPERM;
+	}else{
+		pframe_get(o,pagenum,pf);
+	}
+	
         return 0;
 }
 
