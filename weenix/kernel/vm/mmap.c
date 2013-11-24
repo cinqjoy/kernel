@@ -91,7 +91,7 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	 *        large, or not aligned on a page boundary).
 	 */
 	if(PAGE_ALIGNED(off) ||
-			len > PAGE_SIZE/sizeof(uint32_t) || len <= 0 ||
+			len > 0xfffff/sizeof(uint32_t) || len <= 0 ||
 			0 /*valid address*/) return -EINVAL;
 
 	/*
@@ -125,7 +125,7 @@ do_munmap(void *addr, size_t len)
 {
 	/* valid address? Maximum length is 1024? */
 
-	if(len <= 0 || len > PAGE_SIZE/sizeof(uint32_t)) return -EINVAL;
+	if(len <= 0 || len > 0xfffff/sizeof(uint32_t)) return -EINVAL;
 
 	return vmmap_remove(curproc->p_vmmap, (uint32_t)addr, len);
 

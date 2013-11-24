@@ -323,6 +323,7 @@ self_test(kshell_t *kshell, int argc, char **argv){
 	return 0;
 }
 
+
 /**
  * The init thread's function changes depending on how far along your Weenix is
  * developed. Before VM/FI, you'll probably just want to have this run whatever
@@ -337,12 +338,17 @@ self_test(kshell_t *kshell, int argc, char **argv){
 static void *
 initproc_run(int arg1, void *arg2)
 {
-		
+		char *argv[] = {NULL};
+		char *envp[] = {NULL};
+		kernel_execve("/usr/bin/mmt",argv,envp);
+
+
         kshell_add_command("testproc",(kshell_cmd_func_t)testproc,"Ted Faber's tests");
         kshell_add_command("shtest",(kshell_cmd_func_t)sunghan_test,"sunghan's tests");
         kshell_add_command("dltest",(kshell_cmd_func_t)sunghan_deadlock_test,"sunghan's deadlock tests");
         kshell_add_command("vfstest",(kshell_cmd_func_t)my_vfstest,"vfs 506 tests");
-	kshell_add_command("selftest",(kshell_cmd_func_t)self_test,"self test");
+		kshell_add_command("selftest",(kshell_cmd_func_t)self_test,"self test");
+
         kshell_t *kshell = kshell_create(0);
         if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
         while (kshell_execute_next(kshell));
