@@ -13,7 +13,7 @@
      DRIVERS=1
          VFS=1
         S5FS=1
-          VM=0
+          VM=1
      DYNAMIC=0
 # When you finish S5FS, first enable "VM"; once this is working, then enable
 # "DYNAMIC".
@@ -37,7 +37,7 @@
 # all the printout from dbg() statements.
 #
 # If you change this value, you must do "make clean" and "make".
-	GDBWAIT=1
+	GDBWAIT=0
 
 # Set which CS402 tests are to run.  Valid from 0 (no tests except running init)
 # to 10 ( run all tests plus student tests).  Our class does not use this at all.
