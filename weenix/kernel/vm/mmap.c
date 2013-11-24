@@ -82,7 +82,7 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	 * EINVAL We don't like addr, length, or offset (e.g., they are too
 	 *        large, or not aligned on a page boundary).
 	 */
-	if(off % PAGE_SIZE != 0 ||
+	if(PAGE_ALIGNED(off) ||
 			len > PAGE_SIZE/sizeof(uint32_t) || len <= 0 ||
 			0 /*valid address*/) return -EINVAL;
 
