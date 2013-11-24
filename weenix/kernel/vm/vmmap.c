@@ -231,7 +231,7 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 			/* assgin content to vmarea */
 			new_vmarea = vmarea_alloc();
 			new_vmarea->vma_start = vfn;
-			new_vmarea->vma_end = vfn+npages;
+			new_vmarea->vma_end = vfn+npages-1;
 			new_vmarea->vma_prot = prot;
 			new_vmarea->vma_flags = flags;
 			new_vmarea->vma_off = off;
@@ -245,11 +245,11 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 			}
 			else
 			{
-				if (flags ==MAP_PRIVATE)
-				{
+				/*if (flags ==MAP_PRIVATE)
+				{*/
 					/*	shadow object	*/	
-				}
-				else
+				/*}
+				else*/
 					file->vn_ops->mmap(file, new_vmarea, &new_obj);
 				
 				
@@ -392,7 +392,7 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 		vmarea_t *vma;
 		struct pframe *pf;
 		/* ------assume vaddr is 32 bits not ust 20 bits  -------*/
-		uintptr_t vmaaddr = ADDR_TO_PN((* (uintptr_t*)vaddr));
+		uintptr_t vmaaddr = ADDR_TO_PN(((uintptr_t)vaddr));
 
 		
 		list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
@@ -425,7 +425,7 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 				pt_vaddr = pd->pd_virtual[v_pdindex];
 				ppage_paddr =pt_vaddr[v_ptindex];*/
 				
-				pagenum =  ((*(uint32_t *)(vaddr)) >> PAGE_SHIFT) - vma->vma_start + vma->vma_off;
+				pagenum =  (((uint32_t)(vaddr)) >> PAGE_SHIFT) - vma->vma_start + vma->vma_off;
 
 
 				
@@ -470,7 +470,7 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 	vmarea_t *vma;
 	struct pframe *pf;
 	/* ------assume vaddr is 32 bits not ust 20 bits  -------*/
-	uintptr_t vmaaddr = ADDR_TO_PN((* (uintptr_t*)vaddr));
+	uintptr_t vmaaddr = ADDR_TO_PN(((uintptr_t)vaddr));
 	
 	
 	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
@@ -500,7 +500,7 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 			pt_vaddr = (uint32_t *)(map->vmm_proc->p_pagedir->pd_virtual[v_pdindex]);
 			ppage_paddr =pt_vaddr[v_ptindex];*/
 			
-			pagenum =  ((*(uint32_t *)(vaddr)) >> PAGE_SHIFT) - vma->vma_start + vma->vma_off;
+			pagenum =  (((uint32_t)(vaddr)) >> PAGE_SHIFT) - vma->vma_start + vma->vma_off;
 
 			
 			/*--read so don't care forwrite mode, assign = 1--*/	

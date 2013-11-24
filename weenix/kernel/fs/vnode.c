@@ -527,7 +527,7 @@ special_file_dirtypage(vnode_t *file, off_t offset)
 static int
 special_file_cleanpage(vnode_t *file, off_t offset, void *pagebuf)
 {
-	return file->vn_cdev->cd_ops->dirtypage(file, offset, pagebuf);
+	return file->vn_cdev->cd_ops->cleanpage(file, offset, pagebuf);
 }
 
 /*
