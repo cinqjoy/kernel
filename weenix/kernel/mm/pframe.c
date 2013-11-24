@@ -297,7 +297,34 @@ pframe_fill(pframe_t *pf)
 int
 pframe_get(struct mmobj *o, uint32_t pagenum, pframe_t **result)
 {
-        NOT_YET_IMPLEMENTED("VM: pframe_get");
+		KASSERT(NULL != o);
+		KASSERT(NULL != result);
+		pframe_t *pf;
+		int ret;
+
+		pf = pframe_get_resident(o, pagenum);
+		if(pf == NULL){
+			/* check if we need to call pageoutd and wake it up if necessary */
+			while(pageoutd_needed()){
+				/* wake up pageoutd */
+				pageoutd_wakeup();
+				/* wait for pageoutd finish */
+				sched_sleep_on(&alloc_waitq);
+			}
+			/* allocate a new page */
+			if((pf = pframe_alloc(o, pagenum)) == NULL)
+				return -1;
+
+			/* fill it */
+			ret = pframe_fill(pf);
+			*result = pf;
+			return ret;
+		}
+
+		while(pframe_is_busy(pf))
+			sched_sleep_on(&pf->pf_waitq);
+
+		*result = pf;
         return 0;
 }
 
@@ -357,7 +384,15 @@ pframe_migrate(pframe_t *pf, mmobj_t *dest)
 void
 pframe_pin(pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("VM: pframe_pin");
+	if(!pframe_is_pinned(pf)){
+		list_remove(&pf->pf_link);
+		nallocated--;
+		list_insert_tail(&pinned_list, &pf->pf_link);
+		npinned++;
+	}
+	pf->pf_pincount++;
+
+        /*NOT_YET_IMPLEMENTED("VM: pframe_pin");*/
 }
 
 /*
@@ -373,7 +408,13 @@ pframe_pin(pframe_t *pf)
 void
 pframe_unpin(pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("VM: pframe_unpin");
+	pf->pf_pincount--;
+	if(!pframe_is_pinned(pf)){
+		list_remove(&pf->pf_link);
+		npinned--;
+		list_insert_tail(&alloc_list, &pf->pf_link);
+		nallocated++;
+	}
 }
 
 /*

@@ -58,8 +58,12 @@ vmarea_free(vmarea_t *vma)
 vmmap_t *
 vmmap_create(void)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_create");
-        return NULL;
+	vmmap_t * vmmp = (vmmap_t *) slab_obj_alloc(vmmap_allocator);
+	if(vmmp){
+		list_init(&vmmp->vmm_list);
+		vmmp->vmm_proc = NULL;
+	}
+	return vmmp;
 }
 
 /* Removes all vmareas from the address space and frees the
@@ -67,7 +71,18 @@ vmmap_create(void)
 void
 vmmap_destroy(vmmap_t *map)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_destroy");
+	vmarea_t * vma;
+	list_link_t *link;
+	list_link_t *next;
+	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
+		/*
+		 * does the vmobj need to be free?
+		 * Should I call vmobj->put();
+		 */
+		vma->vma_obj->mmo_ops->put(vma->vma_obj);
+		vmarea_free(vma);
+	}list_iterate_end();
+    slab_obj_free(vmmap_allocator, map);
 }
 
 /* Add a vmarea to an address space. Assumes (i.e. asserts to some extent)
@@ -77,7 +92,19 @@ vmmap_destroy(vmmap_t *map)
 void
 vmmap_insert(vmmap_t *map, vmarea_t *newvma)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_insert");
+	/* assert vmarea is valid */
+	/* newvma->vma_obj cannot be NULL */
+
+	vmarea_t * vma;
+	newvma->vma_vmmap = map;
+	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
+		if(vma->vma_start > newvma->vma_start){
+			list_insert_before(&vma->vma_plink,&newvma->vma_plink);
+			return;
+		}
+	}list_iterate_end();
+	list_insert_tail(&map->vmm_list, &newvma->vma_plink);
+
 }
 
 /* Find a contiguous range of free virtual pages of length npages in
@@ -90,8 +117,37 @@ vmmap_insert(vmmap_t *map, vmarea_t *newvma)
 int
 vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_find_range");
-        return -1;
+	vmarea_t *vma;
+	/* the maximum entry of the pagetable, page number */
+	uint32_t hi = PAGE_SIZE/sizeof (uint32_t) - 1;
+	uint32_t lo = 0;
+	switch(dir){
+		case VMMAP_DIR_HILO:
+			list_iterate_reverse(&map->vmm_list,vma,vmarea_t,vma_plink){
+				lo = vma->vma_end;
+				if((hi-lo) > npages)
+					return lo;
+				hi = vma->vma_start;
+			}list_iterate_end();
+			lo = 0x0;
+			if((hi-lo) > npages)
+				return lo;
+			break;
+		case VMMAP_DIR_LOHI:
+			list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
+				hi = vma->vma_start;
+				if((hi-lo) > npages)
+					return lo;
+				lo = vma->vma_end;
+			}list_iterate_end();
+			hi = PAGE_SIZE/sizeof (uint32_t) - 1;
+			if((hi-lo) > npages)
+				return lo;
+			break;
+		default:
+			return -1;
+	}
+	return -1;
 }
 
 /* Find the vm_area that vfn lies in. Simply scan the address space
@@ -100,8 +156,12 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 vmarea_t *
 vmmap_lookup(vmmap_t *map, uint32_t vfn)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_lookup");
-        return NULL;
+	vmarea_t * vma;
+	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
+		if(vma->vma_start <= vfn && vfn <= vma->vma_end)
+			return vma;
+	}list_iterate_end();
+	return NULL;
 }
 
 /* Allocates a new vmmap containing a new vmarea for each area in the
@@ -180,8 +240,51 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 int
 vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_remove");
-        return -1;
+	vmarea_t *vma;
+	uint32_t lo = lopage;
+	uint32_t hi = lopage+npages-1;
+	uint32_t tmp;
+	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
+		if((lo <= vma->vma_start) &&
+				(hi < vma->vma_end)){
+			/*case 3*/
+			vma->vma_off += hi-vma->vma_start+1;
+			vma->vma_start = hi+1;
+			return 0;
+
+		}else if((lo <= vma->vma_start) &&
+				(hi >= vma->vma_end)){
+			/*case 4*/
+			lo = vma->vma_end+1;
+			vmarea_free(vma);
+
+		}else if((lo > vma->vma_start) &&
+				(hi < vma->vma_end)){
+			/*case 1(split)*/
+			vmarea_t * newvma = vmarea_alloc();
+			newvma->vma_off = vma->vma_off + (hi-vma->vma_start+1);
+			newvma->vma_start = hi+1;
+			newvma->vma_end = vma->vma_end;
+			vma->vma_end = lo-1;
+
+			vma->vma_obj->mmo_refcount++;
+			newvma->vma_obj = vma->vma_obj;
+
+			vmmap_insert(map,newvma);
+			return 0;
+
+		}else if((lo > vma->vma_start) &&
+				(hi >= vma->vma_end)){
+			/*case 2*/
+			tmp = vma->vma_end;
+			vma->vma_end = lo-1;
+			lo = tmp+1;
+
+		}else{
+			/*no match*/
+		}
+	}list_iterate_end();
+	return 0;
 }
 
 /*
@@ -191,8 +294,25 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 int
 vmmap_is_range_empty(vmmap_t *map, uint32_t startvfn, uint32_t npages)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_is_range_empty");
-        return 0;
+	/*
+	 * The pages in designated range should all be mapped or
+	 * only if one page had been mapped, we should return 0.
+	 */
+
+	/* assert npages != 0 */
+
+	vmarea_t *vma;
+	uint32_t hi = startvfn+npages-1;
+	uint32_t lo = startvfn;
+
+	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
+		if(((vma->vma_start <= lo) && (lo <= vma->vma_end)) ||   /* lo is inside a vmarea */
+				((vma->vma_start <= hi) && (hi <= vma->vma_end)) || /* hi is inside a vmarea */
+				((lo < vma->vma_start) && (vma->vma_end < hi))){ /* vmarea is in side the range we specified */
+			return 0;
+		}
+	}list_iterate_end();
+	return 1;
 }
 
 /* Read into 'buf' from the virtual address space of 'map' starting at
