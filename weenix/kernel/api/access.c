@@ -122,7 +122,26 @@ fail:
  */
 int addr_perm(struct proc *p, const void *vaddr, int perm)
 {
-        NOT_YET_IMPLEMENTED("VM: addr_perm");
+        /*NOT_YET_IMPLEMENTED("VM: addr_perm");*/
+	/*
+	list_iterate_begin(&o->mmo_respages, myFrame, pframe_t, pf_olink) {
+                                if(myFrame->pf_obj==o && myFrame->pf_pagenum==pagenum){
+                                        *pf = myFrame;
+                                        return 0;
+                                }
+                        }list_iterate_end();
+
+*/
+	vmarea_t *myVmarea;
+	list_iterate_begin(&p->p_vmmap->vmm_list,myVmarea,vmarea_t,vma_plink){
+		if(PN_TO_ADDR(myVmarea->vma_start)<= vaddr && PN_TO_ADDR(myVmarea->vma_end)>= vaddr){
+			if((myVmarea->vma_prot&perm)==perm){
+				return 1;
+			}else{
+				return 0;
+			}
+		}
+	}list_iterate_end();
         return 0;
 }
 
@@ -137,6 +156,22 @@ int addr_perm(struct proc *p, const void *vaddr, int perm)
  */
 int range_perm(struct proc *p, const void *avaddr, size_t len, int perm)
 {
-        NOT_YET_IMPLEMENTED("VM: range_perm");
-        return 0;
+        /*NOT_YET_IMPLEMENTED("VM: range_perm");*/
+	vmarea_t *myVmarea;
+	size_t tmp_len=0;
+        list_iterate_begin(&p->p_vmmap->vmm_list,myVmarea,vmarea_t,vma_plink){
+                if(PN_TO_ADDR(myVmarea->vma_start)<= (avaddr+tmp_len) && PN_TO_ADDR(myVmarea->vma_end)>= (avaddr+tmp_len)){
+                        if((myVmarea->vma_prot&perm)!=perm)
+                                return 0;
+                        
+			if(PN_TO_ADDR(myVmarea->vma_end)-(avaddr+tmp_len)+1>=len)
+				return 1;
+			else{
+				tmp_len = PN_TO_ADDR(myVmarea->vma_end)+1-(avaddr+tmp_len)+1;
+				len = len - tmp_len;
+			}	
+                }
+        }list_iterate_end();
+	
+	return 0;
 }
