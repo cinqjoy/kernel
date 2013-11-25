@@ -50,6 +50,9 @@ void
 vmarea_free(vmarea_t *vma)
 {
         KASSERT(NULL != vma);
+        list_remove(vma->vma_olink);
+        list_remove(vma->vma_plink);
+		vma->vma_obj->mmo_ops->put(vma->vma_obj);
         slab_obj_free(vmarea_allocator, vma);
 }
 
@@ -72,16 +75,10 @@ void
 vmmap_destroy(vmmap_t *map)
 {
 	vmarea_t * vma;
-	list_link_t *link;
-	list_link_t *next;
-	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
-		/*
-		 * does the vmobj need to be free?
-		 * Should I call vmobj->put();
-		 */
-		vma->vma_obj->mmo_ops->put(vma->vma_obj);
+	while(list_empty(&map->vmm_list)){
+		vma = list_head(&map->vmm_list,vmarea_t,vma_plink);
 		vmarea_free(vma);
-	}list_iterate_end();
+	}
     slab_obj_free(vmmap_allocator, map);
 }
 
