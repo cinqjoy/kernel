@@ -56,8 +56,29 @@ init_func(syscall_init);
 static int
 sys_read(read_args_t *arg)
 {
-        NOT_YET_IMPLEMENTED("VM: sys_read");
-        return -1;
+	read_args_t karg;
+	int rbytes;
+
+	int err;
+
+
+	if((err = copy_from_user(&karg, arg, sizeof(read_args_t)))<0){
+		curthr->kt_errno = -err;
+		return -1;
+	}
+	karg.buf = page_alloc();
+	if((err = do_read(karg.fd, karg.buf, karg.nbytes))<0){
+		curthr->kt_errno = -err;
+		return -1;
+	}
+	if((err = copy_to_user(arg, &karg, sizeof(read_args_t)))<0){
+		curthr->kt_errno = -err;
+		return -1;
+	}
+	page_free(karg.buf);
+
+	rbytes = err;
+	return rbytes;
 }
 
 /*
@@ -66,8 +87,29 @@ sys_read(read_args_t *arg)
 static int
 sys_write(write_args_t *arg)
 {
-        NOT_YET_IMPLEMENTED("VM: sys_write");
-        return -1;
+	write_args_t karg;
+	void *buf;
+	int rbytes;
+
+	int err;
+
+
+	if((err = copy_from_user(&karg, arg, sizeof(write_args_t)))<0){
+		curthr->kt_errno = -err;
+		return -1;
+	}
+	if((err = do_write(karg.fd, karg.buf, karg.nbytes))<0){
+		curthr->kt_errno = -err;
+		return -1;
+	}
+	if((err = copy_to_user(arg, &karg, sizeof(read_args_t)))<0){
+		curthr->kt_errno = -err;
+		return -1;
+	}
+	page_free(buf);
+
+	rbytes = err;
+	return rbytes;
 }
 
 /*
@@ -82,8 +124,30 @@ sys_write(write_args_t *arg)
 static int
 sys_getdents(getdents_args_t *arg)
 {
-        NOT_YET_IMPLEMENTED("VM: sys_getdents");
-        return -1;
+	getdents_args_t karg;
+	int err;
+
+
+	if((err = copy_from_user(&karg, arg, sizeof(dirent_t)))<0){
+		curthr->kt_errno = -err;
+		return -1;
+	}
+
+	dirent_t dir;
+	karg.dirp = dir;
+	while(1){
+		if((err = do_getdent(karg.fd, karg.dirp)) < 0){
+			curthr->kt_errno = -err;
+			return -1;
+		}else{
+
+
+		}
+	}
+	if((err = copy_to_user(arg->buf,karg.buf,karg.nbytes))<0){
+		curthr->kt_errno = -err;
+		return -1;
+	}
 }
 
 #ifdef __MOUNTING__
