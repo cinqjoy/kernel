@@ -24,6 +24,7 @@
 
 #define TEST_DBG(s)	\
 		({	\
+			dbg(DBG_PRINT, (s)); \ 
 		})
 
 
