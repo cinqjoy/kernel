@@ -88,7 +88,6 @@ static int
 sys_write(write_args_t *arg)
 {
 	write_args_t karg;
-	void *buf;
 	int rbytes;
 
 	int err;
@@ -106,7 +105,6 @@ sys_write(write_args_t *arg)
 		curthr->kt_errno = -err;
 		return -1;
 	}
-	page_free(buf);
 
 	rbytes = err;
 	return rbytes;
@@ -124,6 +122,7 @@ sys_write(write_args_t *arg)
 static int
 sys_getdents(getdents_args_t *arg)
 {
+/*
 	getdents_args_t karg;
 	int err;
 
@@ -148,6 +147,8 @@ sys_getdents(getdents_args_t *arg)
 		curthr->kt_errno = -err;
 		return -1;
 	}
+*/
+return 0;
 }
 
 #ifdef __MOUNTING__
