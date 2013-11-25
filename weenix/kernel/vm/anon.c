@@ -115,13 +115,30 @@ anon_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 {
         /*NOT_YET_IMPLEMENTED("VM: anon_lookuppage");*/
 	pframe_t *myFrame;
-	list_iterate_begin(&o->mmo_respages, myFrame, pframe_t, pf_olink) {
+/*	list_iterate_begin(&o->mmo_respages, myFrame, pframe_t, pf_olink) {
         	if(myFrame->pf_pagenum == pagenum){
 			*pf = myFrame;
 			return 0;	
 		}
         } list_iterate_end();
+*/	
+	if(forwrite==1){
+		return -EPERM;
+	}else{
+		if(o->mmo_nrespages>0){
+			list_iterate_begin(&o->mmo_respages, myFrame, pframe_t, pf_olink) {
+				if(myFrame->pf_obj==o && myFrame->pf_pagenum==pagenum){
+					*pf = myFrame;
+					return 0;
+				}
+		        }list_iterate_end();
+			return pframe_get(o,pagenum,pf);
+		}else{
+			return 0;
+		}
 
+	}
+	
         return 0;
 }
 
@@ -131,20 +148,27 @@ static int
 anon_fillpage(mmobj_t *o, pframe_t *pf)
 {
         /*NOT_YET_IMPLEMENTED("VM: anon_fillpage");*/
-	pframe_t *myFrame;
-	if((o==pf->pf_obj)){
-		myFrame = pframe_get_resident(pf->pf_obj,pf->pf_pagenum);
-		if(myFrame!=NULL){
+	memset(pf->pf_addr,0,PAGE_SIZE);
+	/*pframe_t *myFrame=NULL;
+	list_iterate_begin(&o->mmo_respages, myFrame, pframe_t,pf_olink){
+		if(myFrame->pf_obj==o&& myFrame->pf_pagenum==pf->pf_pagenum){
 			memcpy(pf->pf_addr,myFrame->pf_addr,PAGE_SIZE);
-			if(!pframe_is_pinned(myFrame)){
-				pframe_pin(myFrame);
-			}
-		}else{
-			return -EFAULT;
+	                if(!pframe_is_pinned(myFrame)){
+        	                pframe_pin(myFrame);
+               		}
+		}
+	}list_iterate_end();
+	if(myFrame==NULL)
+		return -EFAULT;*/
+	/*myFrame = pframe_get_resident(o,pf->pf_pagenum);
+	if(myFrame!=NULL){
+		memcpy(pf->pf_addr,myFrame->pf_addr,PAGE_SIZE);
+		if(!pframe_is_pinned(myFrame)){
+			pframe_pin(myFrame);
 		}
 	}else{
-		/*add the right return value*/
-	}	
+		return -EFAULT;
+	}*/
         return 0;
 }
 
@@ -152,24 +176,28 @@ static int
 anon_dirtypage(mmobj_t *o, pframe_t *pf)
 {
         /*NOT_YET_IMPLEMENTED("VM: anon_dirtypage");*/
-	
-        return 0;
+	/*since teh anonymous object should not be dirty. Nothing have to do here*/
+        return -EPERM;
 }
 
 static int
 anon_cleanpage(mmobj_t *o, pframe_t *pf)
 {
         /*NOT_YET_IMPLEMENTED("VM: anon_cleanpage");*/
-	pframe_t *myFrame;
-	if((o==pf->pf_obj)){
-		myFrame = pframe_get_resident(pf->pf_obj,pf->pf_pagenum);
-		if(myFrame!=NULL){
-			memcpy(myFrame->pf_addr,pf->pf_addr,PAGE_SIZE);
-		}else{
-			return -EFAULT;
+	/*pframe_t *myFrame=NULL;
+	list_iterate_begin(&o->mmo_respages, myFrame, pframe_t,pf_olink){
+		if(myFrame->pf_obj==o&& myFrame->pf_pagenum==pf->pf_pagenum){
+			memcpy(myFrame->pf_addr,ph->pf_addr,PAGE_SIZE);
 		}
+	}list_iterate_end();	
+	if(myFrame==NULL)
+		return -EFAULT;
+	*/
+	/*myFrame = pframe_get_resident(o,pf->pf_pagenum);
+	if(myFrame!=NULL){
+		memcpy(myFrame->pf_addr,pf->pf_addr,PAGE_SIZE);
 	}else{
-		/*add the right return value*/
-	}	
-        return -1;
+		return -EFAULT;
+	}*/
+        return 0;
 }
