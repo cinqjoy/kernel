@@ -18,9 +18,14 @@
 #include "fs/stat.h"
 #include "util/debug.h"
 
+#if 1
 #define TEST_DBG(s)	\
 		({	\
+			dbg(DBG_PRINT, (s)); \
 		})
+#endif
+
+#endif
 
 /* find empty index in p->p_files[] */
 int
