@@ -25,6 +25,8 @@
 		})
 #endif
 
+#endif
+
 /* find empty index in p->p_files[] */
 int
 get_empty_fd(proc_t *p)
