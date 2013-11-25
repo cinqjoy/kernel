@@ -69,7 +69,7 @@ shadow_create()
     	shadowobj = slab_obj_alloc(shadow_allocator);
     	KASSERT(shadowobj);
         mmobj_init(shadowobj, &shadow_mmobj_ops);
-        shadowobj->mmo_ops->ref(shadowobj);
+        shadowobj->mmo_refcount = 1;
     	return shadowobj;
 }
 

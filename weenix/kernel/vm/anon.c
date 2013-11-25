@@ -57,7 +57,7 @@ anon_create()
 	mmobj_t *myAnon;
 	myAnon = (mmobj_t*)slab_obj_alloc(anon_allocator);
         mmobj_init(myAnon, &anon_mmobj_ops);
-	myAnon->mmo_refcount++;
+	myAnon->mmo_refcount = 1;
 	return myAnon;
 }
 
