@@ -52,7 +52,8 @@ static mmobj_ops_t shadow_mmobj_ops = {
 void
 shadow_init()
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_init");
+	shadow_allocator=slab_allocator_create("shadowobj", sizeof(mmobj_t));
+	KASSERT(shadow_allocator);
 }
 
 /*
@@ -64,8 +65,12 @@ shadow_init()
 mmobj_t *
 shadow_create()
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_create");
-        return NULL;
+        mmobj_t *shadowobj;
+    	shadowobj = slab_obj_alloc(shadow_allocator);
+    	KASSERT(shadowobj);
+        mmobj_init(shadowobj, &shadow_mmobj_ops);
+        shadowobj->mmo_ops->ref(shadowobj);
+    	return shadowobj;
 }
 
 /* Implementation of mmobj entry points: */
@@ -76,7 +81,8 @@ shadow_create()
 static void
 shadow_ref(mmobj_t *o)
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_ref");
+		KASSERT(o && (0 < o->mmo_refcount) && (&shadow_mmobj_ops == o->mmo_ops));
+		o->mmo_refcount++;
 }
 
 /*
@@ -90,7 +96,17 @@ shadow_ref(mmobj_t *o)
 static void
 shadow_put(mmobj_t *o)
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_put");
+		KASSERT(o && (0 < o->mmo_refcount) && (&shadow_mmobj_ops == o->mmo_ops));
+		o->mmo_refcount--;
+		if(o->mmo_refcount==o->mmo_nrespages){
+			pframe_t *pf;
+			list_iterate_begin(&o->mmo_respages,pf,pframe_t,pf_olink){
+				while(pframe_is_pinned(pf)) pframe_unpin(pf);
+                if (pframe_is_busy(pf)) sched_sleep_on(&pf->pf_waitq);
+                if (pframe_is_dirty(pf)) pframe_clean(pf);
+                pframe_free(pf);
+			}list_iterate_end();
+		}slab_obj_free(shadow_allocator,o);
 }
 
 /* This function looks up the given page in this shadow object. The
@@ -103,8 +119,22 @@ shadow_put(mmobj_t *o)
 static int
 shadow_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_lookuppage");
-        return 0;
+		pframe_t tmp_pf;
+		list_iterate_begin(&o->mmo_respages,tmp_pf,pframe_t,pf_olink){
+			if(tmp_pf->pf_pagenum==pagenum&&tmp_pf->pf_obj==o){
+				*pf=tmp_pf;
+				return 0;
+			}
+		}list_iterate_end();
+
+		if(!forwrite){/* looked up for reading */
+			if(o->mmo_shadowed){
+				return o->mmo_shadowed->mmo_ops->lookuppage(o->mmo_shadowed,pagenum,forwrite,pf);
+			}else return -1; /* Should not be here */
+		}
+		else{/* looked up for writing */
+			return pframe_get(o,pagenum,pf);
+		}
 }
 
 /* As per the specification in mmobj.h, fill the page frame starting
@@ -118,8 +148,13 @@ shadow_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 static int
 shadow_fillpage(mmobj_t *o, pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_fillpage");
-        return 0;
+		KASSERT(pframe_is_busy(pf));
+	    KASSERT(!pframe_is_pinned(pf));
+		pframe_t *tmp_pf;
+		if(o->mmo_ops->lookuppage(o,pf->pf_pagenum,0,&tmp_pf)==0){
+			memcpy(pf->pf_addr,tmp_pf->pf_addr,PAGE_SIZE);
+			return 0;
+		}else return -1; /* Should not be here */
 }
 
 /* These next two functions are not difficult. */
@@ -127,13 +162,25 @@ shadow_fillpage(mmobj_t *o, pframe_t *pf)
 static int
 shadow_dirtypage(mmobj_t *o, pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_dirtypage");
-        return -1;
+	pframe_t tmp_pf;
+	list_iterate_begin(&o->mmo_respages,tmp_pf,pframe_t,pf_olink){
+		if(tmp_pf->pf_pagenum==pf->pf_pagenum&&tmp_pf->pf_obj==pf->pf_obj){
+			pframe_set_dirty(tmp_pf);
+			return 0;
+		}
+	}list_iterate_end();
+	return 0;
 }
 
 static int
 shadow_cleanpage(mmobj_t *o, pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_cleanpage");
-        return -1;
+	pframe_t tmp_pf;
+	list_iterate_begin(&o->mmo_respages,tmp_pf,pframe_t,pf_olink){
+		if(tmp_pf->pf_pagenum==pf->pf_pagenum&&tmp_pf->pf_obj==pf->pf_obj){
+			memcpy(tmp_pf->pf_addr,pf->pf_addr,PAGE_SIZE);
+			return 0;
+		}
+	}list_iterate_end();
+	return 0;
 }
