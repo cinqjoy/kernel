@@ -119,7 +119,7 @@ shadow_put(mmobj_t *o)
 static int
 shadow_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 {
-		pframe_t tmp_pf;
+		pframe_t *tmp_pf;
 		list_iterate_begin(&o->mmo_respages,tmp_pf,pframe_t,pf_olink){
 			if(tmp_pf->pf_pagenum==pagenum&&tmp_pf->pf_obj==o){
 				*pf=tmp_pf;
@@ -162,7 +162,7 @@ shadow_fillpage(mmobj_t *o, pframe_t *pf)
 static int
 shadow_dirtypage(mmobj_t *o, pframe_t *pf)
 {
-	pframe_t tmp_pf;
+	pframe_t *tmp_pf;
 	list_iterate_begin(&o->mmo_respages,tmp_pf,pframe_t,pf_olink){
 		if(tmp_pf->pf_pagenum==pf->pf_pagenum&&tmp_pf->pf_obj==pf->pf_obj){
 			pframe_set_dirty(tmp_pf);
@@ -175,7 +175,7 @@ shadow_dirtypage(mmobj_t *o, pframe_t *pf)
 static int
 shadow_cleanpage(mmobj_t *o, pframe_t *pf)
 {
-	pframe_t tmp_pf;
+	pframe_t *tmp_pf;
 	list_iterate_begin(&o->mmo_respages,tmp_pf,pframe_t,pf_olink){
 		if(tmp_pf->pf_pagenum==pf->pf_pagenum&&tmp_pf->pf_obj==pf->pf_obj){
 			memcpy(tmp_pf->pf_addr,pf->pf_addr,PAGE_SIZE);
