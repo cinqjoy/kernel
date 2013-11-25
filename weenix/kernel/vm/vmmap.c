@@ -78,7 +78,7 @@ void
 vmmap_destroy(vmmap_t *map)
 {
 	vmarea_t * vma;
-	while(list_empty(&map->vmm_list)){
+	while(!list_empty(&map->vmm_list)){
 		vma = list_head(&map->vmm_list,vmarea_t,vma_plink);
 		vmarea_free(vma);
 	}
