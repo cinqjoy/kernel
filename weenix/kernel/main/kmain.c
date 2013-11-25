@@ -341,7 +341,9 @@ initproc_run(int arg1, void *arg2)
 		char *argv[] = {NULL};
 		char *envp[] = {NULL};
 		kernel_execve("/usr/bin/mmt",argv,envp);
-
+		kernel_execve("/usr/bin/hello",argv,envp);
+		kernel_execve("/usr/bin/args",argv,envp);
+		kernel_execve("/usr/bin/segfault",argv,envp);
 /*
         kshell_add_command("testproc",(kshell_cmd_func_t)testproc,"Ted Faber's tests");
         kshell_add_command("shtest",(kshell_cmd_func_t)sunghan_test,"sunghan's tests");

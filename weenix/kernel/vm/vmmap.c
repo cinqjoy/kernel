@@ -50,6 +50,12 @@ void
 vmarea_free(vmarea_t *vma)
 {
         KASSERT(NULL != vma);
+        if(list_link_is_linked(&vma->vma_olink))
+        	list_remove(&vma->vma_olink);
+        if(list_link_is_linked(&vma->vma_plink))
+        	list_remove(&vma->vma_plink);
+		if(vma->vma_obj != NULL)
+			vma->vma_obj->mmo_ops->put(vma->vma_obj);
         slab_obj_free(vmarea_allocator, vma);
 }
 
@@ -72,16 +78,10 @@ void
 vmmap_destroy(vmmap_t *map)
 {
 	vmarea_t * vma;
-	list_link_t *link;
-	list_link_t *next;
-	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
-		/*
-		 * does the vmobj need to be free?
-		 * Should I call vmobj->put();
-		 */
-		vma->vma_obj->mmo_ops->put(vma->vma_obj);
+	while(!list_empty(&map->vmm_list)){
+		vma = list_head(&map->vmm_list,vmarea_t,vma_plink);
 		vmarea_free(vma);
-	}list_iterate_end();
+	}
     slab_obj_free(vmmap_allocator, map);
 }
 
@@ -206,8 +206,8 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 {
 
 			int vfn;
-			mmobj_t * anon_obj;
 			mmobj_t * new_obj;
+			mmobj_t * shadow_obj;
 			proc_t * p = map->vmm_proc;
 			vmarea_t * new_vmarea = NULL;
 	
@@ -237,28 +237,38 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 			new_vmarea->vma_off = off;
 	
 			/* assume anaomous objects ,each vmarea needs to have one */
+			
+
+			
 			if (file==NULL)
-			{
-			  anon_obj = anon_create();
-			  new_vmarea->vma_obj = anon_obj;
-			  /*file->vn_ops->create()*/
-			}
+			  	new_obj = anon_create();
 			else
-			{
-				/*if (flags ==MAP_PRIVATE)
-				{*/
-					/*	shadow object	*/	
-				/*}
-				else*/
-					file->vn_ops->mmap(file, new_vmarea, &new_obj);
-				
-				
-			}
+				file->vn_ops->mmap(file, new_vmarea, &new_obj);
+
+			if ((flags & 0x00000002) ==MAP_PRIVATE)
+		 	{
+			  		shadow_obj = shadow_create();
+					shadow_obj->mmo_shadowed = new_obj;
+					shadow_obj->mmo_un.mmo_bottom_obj = new_obj;
+					new_vmarea->vma_obj = shadow_obj;
+			 }
+			 else
+			 { 
+			  		new_vmarea->vma_obj = new_obj;
+			  
+			 }
 	
 			/*list_init(&(*new)->vma_olink);
 			list_init(&(*new)->vma_plink);
 			list_t			  mmo_vmas;*/
 			/* assign plink  */
+
+
+			new_obj->mmo_shadowed = NULL;
+			
+			list_init(&new_obj->mmo_un.mmo_vmas);
+			list_insert_tail(&new_obj->mmo_un.mmo_vmas, &new_vmarea->vma_olink);
+
 			vmmap_insert(map, new_vmarea);
 
 

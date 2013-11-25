@@ -108,6 +108,6 @@ zero_read(bytedev_t *dev, int offset, void *buf, int count)
 static int
 zero_mmap(vnode_t *file, vmarea_t *vma, mmobj_t **ret)
 {
-        NOT_YET_IMPLEMENTED("VM: zero_mmap");
-        return -1;
+	return file->vn_cdev->cd_ops->mmap(file,vma,&ret);
+	/* ref */
 }
