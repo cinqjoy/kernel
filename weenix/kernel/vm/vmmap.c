@@ -54,7 +54,8 @@ vmarea_free(vmarea_t *vma)
         	list_remove(&vma->vma_olink);
         if(list_link_is_linked(&vma->vma_plink))
         	list_remove(&vma->vma_plink);
-		vma->vma_obj->mmo_ops->put(vma->vma_obj);
+		if(vma->vma_obj != NULL)
+			vma->vma_obj->mmo_ops->put(vma->vma_obj);
         slab_obj_free(vmarea_allocator, vma);
 }
 
