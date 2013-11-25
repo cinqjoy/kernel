@@ -50,8 +50,8 @@ void
 vmarea_free(vmarea_t *vma)
 {
         KASSERT(NULL != vma);
-        list_remove(vma->vma_olink);
-        list_remove(vma->vma_plink);
+        list_remove(&vma->vma_olink);
+        list_remove(&vma->vma_plink);
 		vma->vma_obj->mmo_ops->put(vma->vma_obj);
         slab_obj_free(vmarea_allocator, vma);
 }
