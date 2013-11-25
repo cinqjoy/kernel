@@ -127,7 +127,10 @@ proc_create(char *name)
 		
 		myProc->p_brk = NULL;
 		myProc->p_start_brk = NULL;
-		myProc->p_vmmap = NULL;
+		myProc->p_vmmap = vmmap_create();
+		if(myProc->p_vmmap != NULL){
+			myProc->p_vmmap->vmm_proc = myProc;
+		}
         return myProc;
 }
 
