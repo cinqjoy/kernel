@@ -210,7 +210,7 @@ idleproc_run(int arg1, void *arg2)
 	for(i=0; i<vt_num_terminals(); i++){
 		sprintf(c,"/dev/tty%d",i);
 		do_mknod(c, S_IFCHR, MKDEVID(2,i));
-		}
+	}
 	dbg(DBG_PRINT, "Successfully created %d TTY devices.\n", vt_num_terminals());
 	int fd;
 	fd = do_open("/dev/tty0",O_RDONLY);
@@ -348,17 +348,17 @@ self_test(kshell_t *kshell, int argc, char **argv){
 static void *
 initproc_run(int arg1, void *arg2)
 {
-		char *argv[] = {NULL};
+		char *argv[] = {"uname","-a",NULL};
 		char *envp[] = {NULL};
 		/*kernel_execve("/usr/bin/mmt",argv,envp);*/
-		kernel_execve("/usr/bin/hello",argv,envp);
+		/*kernel_execve("/usr/bin/hello",argv,envp);*/
 		/*kernel_execve("/usr/bin/args",argv,envp);*/
-		/*kernel_execve("/usr/bin/segfault",argv,envp);*/
+		kernel_execve("/bin/uname",argv,envp);
 /*
         kshell_add_command("testproc",(kshell_cmd_func_t)testproc,"Ted Faber's tests");
         kshell_add_command("shtest",(kshell_cmd_func_t)sunghan_test,"sunghan's tests");
         kshell_add_command("dltest",(kshell_cmd_func_t)sunghan_deadlock_test,"sunghan's deadlock tests");
-        kshell_add_command("vfstest",(kshell_cmd_func_t)my_vfstest,"vfs 506 tests");
+        'kshell_add_command("vfstest",(kshell_cmd_func_t)my_vfstest,"vfs 506 tests");
 		kshell_add_command("selftest",(kshell_cmd_func_t)self_test,"self test");
 
         kshell_t *kshell = kshell_create(0);
