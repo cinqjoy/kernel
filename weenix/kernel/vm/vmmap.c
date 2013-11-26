@@ -171,8 +171,32 @@ vmmap_lookup(vmmap_t *map, uint32_t vfn)
 vmmap_t *
 vmmap_clone(vmmap_t *map)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_clone");
-        return NULL;
+		vmmap_t * new_vmmap = NULL; 
+		vmarea_t * new_vmarea = NULL;
+		vmarea_t *vma = NULL;
+							
+		new_vmmap = vmmap_create();
+										
+		if (!list_empty(&map->vmm_list))
+		{
+
+			list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
+				new_vmarea = vmarea_alloc();
+				new_vmarea->vma_start = vma->vma_start;
+				new_vmarea->vma_end = vma->vma_end;
+				new_vmarea->vma_prot = vma->vma_prot;
+				new_vmarea->vma_flags = vma->vma_flags;
+				new_vmarea->vma_off = vma->vma_flags;
+				/* plink , vma_vmmap initialize */
+				vmmap_insert(new_vmmap, new_vmarea);
+				new_vmarea->vma_obj = NULL;
+				/* no need olink since obj is non-decided */
+			}list_iterate_end();
+		}																							
+		if (new_vmmap != NULL)
+			return new_vmmap;
+		else
+			return NULL;
 }
 
 /* Insert a mapping into the map starting at lopage for npages pages.
@@ -249,12 +273,20 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 		 	{
 			  		shadow_obj = shadow_create();
 					shadow_obj->mmo_shadowed = new_obj;
+					new_obj->mmo_ops->ref(new_obj);
+
 					shadow_obj->mmo_un.mmo_bottom_obj = new_obj;
+					new_obj->mmo_ops->ref(new_obj);
+
 					new_vmarea->vma_obj = shadow_obj;
+
+					shadow_obj->mmo_ops->ref(shadow_obj);
 			 }
 			 else
 			 { 
 			  		new_vmarea->vma_obj = new_obj;
+
+					new_obj->mmo_ops->ref(new_obj);
 			  
 			 }
 	
