@@ -212,13 +212,6 @@ idleproc_run(int arg1, void *arg2)
 		do_mknod(c, S_IFCHR, MKDEVID(2,i));
 	}
 	dbg(DBG_PRINT, "Successfully created %d TTY devices.\n", vt_num_terminals());
-	int fd;
-	fd = do_open("/dev/tty0",O_RDONLY);
-	KASSERT(fd==0);
-	fd = do_open("/dev/tty0",O_WRONLY);
-	KASSERT(fd==1);
-	fd = do_open("/dev/tty0",O_WRONLY);
-	KASSERT(fd==2);
 #endif
 
         /* Finally, enable interrupts (we want to make sure interrupts
@@ -240,9 +233,6 @@ idleproc_run(int arg1, void *arg2)
 #ifdef __VFS__
         /* Shutdown the vfs: */
         dbg_print("weenix: vfs shutdown...\n");
-        do_close(2);
-        do_close(1);
-        do_close(0);
         vput(curproc->p_cwd);
 		vput(init->p_cwd);
 		vnode_flush_all(vfs_root_vn->vn_fs);
@@ -348,6 +338,13 @@ self_test(kshell_t *kshell, int argc, char **argv){
 static void *
 initproc_run(int arg1, void *arg2)
 {
+		int fd;
+		fd = do_open("/dev/tty0",O_RDONLY);
+		KASSERT(fd==0);
+		fd = do_open("/dev/tty0",O_WRONLY);
+		KASSERT(fd==1);
+		fd = do_open("/dev/tty0",O_WRONLY);
+		KASSERT(fd==2);
 		char *argv[] = {"uname","-a",NULL};
 		char *envp[] = {NULL};
 		/*kernel_execve("/usr/bin/mmt",argv,envp);*/
@@ -366,6 +363,9 @@ initproc_run(int arg1, void *arg2)
         while (kshell_execute_next(kshell));
         kshell_destroy(kshell);
 */		
+        do_close(2);
+        do_close(1);
+        do_close(0);
         return NULL;
 }
 
