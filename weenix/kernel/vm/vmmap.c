@@ -414,6 +414,7 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 				uint32_t pagenum;
 				uint32_t *pt_vaddr;				
 				uint32_t ppage_paddr;*/								
+				uint32_t poffset;
 				uint32_t pagenum;
 				/* ----- assume size is small than one page size 4KB -------*/
 				/*if ( (remainsize <=PAGE_SIZE)
@@ -436,7 +437,7 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 				ppage_paddr =pt_vaddr[v_ptindex];*/
 				
 				pagenum =  (((uint32_t)(vaddr)) >> PAGE_SHIFT) - vma->vma_start + vma->vma_off;
-
+				poffset =  (((uint32_t)(vaddr)) & 0x00000FFF);
 
 				
 				/*--read so don't care forwrite mode, assign = 1--*/	
@@ -444,12 +445,15 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 				{
 
 
-						memcpy(buf, pf->pf_addr, size);
+						memcpy(buf, (void*)(((uint32_t)pf->pf_addr) | poffset), size);
 						
 						/*return v->vn_ops->fillpage(v, (int)PN_TO_ADDR(pf->pf_pagenum), pf->pf_addr);*/
 						/*return v->vn_ops->fillpage(v, (int)PN_TO_ADDR(pf->pf_pagenum), pf->pf_addr);*/					
 						/*map->vmm_proc->p_pagedir->pd_virtual[pdindex] 
 						ppaddr = uintptr_t pt_virt_to_phys((uintptr_t) (*pf->pf_addr));*/
+
+						if (size == remainsize) /* read finish*/
+							return 0;
 					
 				}
 				else
@@ -492,6 +496,7 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 			uint32_t *pt_vaddr;				
 			uint32_t ppage_paddr;*/
 			uint32_t pagenum;
+			uint32_t poffset;
 			/* ----- assume size is small than one page size 4KB -------*/
 			/*if ( (remainsize <=PAGE_SIZE)
 			{
@@ -511,6 +516,7 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 			ppage_paddr =pt_vaddr[v_ptindex];*/
 			
 			pagenum =  (((uint32_t)(vaddr)) >> PAGE_SHIFT) - vma->vma_start + vma->vma_off;
+			poffset =  (((uint32_t)(vaddr)) & 0x00000FFF);
 
 			
 			/*--read so don't care forwrite mode, assign = 1--*/	
@@ -518,7 +524,9 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 			{
 	
 
-					memcpy(pf->pf_addr, buf, size);				
+					memcpy(  (void *) (((uint32_t)pf->pf_addr)| poffset), buf, size);				
+					if (size == remainsize) /* write finish */
+							return 0;
 			}
 			else
 				return -EFAULT;
