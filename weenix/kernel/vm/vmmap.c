@@ -338,7 +338,7 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 			newvma->vma_end = vma->vma_end;
 			vma->vma_end = lo-1;
 
-			vma->vma_obj->mmo_refcount++;
+			vma->vma_obj->mmo_ops->ref(vma->vma_obj);
 			newvma->vma_obj = vma->vma_obj;
 
 			vmmap_insert(map,newvma);
