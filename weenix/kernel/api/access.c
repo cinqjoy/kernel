@@ -163,7 +163,7 @@ int range_perm(struct proc *p, const void *avaddr, size_t len, int perm)
 	int i;
 
 	for(i=0; i*PAGE_SIZE<=len ;i++){
-		myVmarea = vmmap_lookup(&p->p_vmmap,ADDR_TO_PN(avaddr)+i);
+		myVmarea = vmmap_lookup(p->p_vmmap,ADDR_TO_PN(avaddr)+i);
 		if(myVmarea == NULL)
 			return 0;
 		if((myVmarea->vma_prot&perm) != perm)
