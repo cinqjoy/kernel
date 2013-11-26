@@ -171,7 +171,7 @@ int range_perm(struct proc *p, const void *avaddr, size_t len, int perm)
 		if(i*PAGE_SIZE == len)
 			return 1;
 	}
-	if(i*PAGE_SIZE < len)
+	if((i-1)*PAGE_SIZE < len)
 		return 1;
 	else return 0;
 
