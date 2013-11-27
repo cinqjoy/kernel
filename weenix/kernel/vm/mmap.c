@@ -43,8 +43,8 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	 * EINVAL flags contained neither MAP_PRIVATE or MAP_SHARED, or
 	 * 	      contained both of these values.
 	 */
-	if((flags & MAP_PRIVATE)!= MAP_PRIVATE ||
-			(flags & MAP_SHARED)!= MAP_SHARED ||
+	if(((flags & MAP_PRIVATE)!= MAP_PRIVATE &&
+			(flags & MAP_SHARED)!= MAP_SHARED) ||
 			(flags & (MAP_SHARED|MAP_PRIVATE)) == (MAP_SHARED|MAP_PRIVATE) )
 		return -EINVAL;
 
@@ -90,7 +90,7 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	 * EINVAL We don't like addr, length, or offset (e.g., they are too
 	 *        large, or not aligned on a page boundary).
 	 */
-	if(PAGE_ALIGNED(off) ||
+	if(!PAGE_ALIGNED(off) ||
 			len > 0xfffff/sizeof(uint32_t) || len <= 0 ||
 			0 /*valid address*/) return -EINVAL;
 

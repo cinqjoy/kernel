@@ -119,8 +119,8 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 {
 	vmarea_t *vma;
 	/* the maximum entry of the pagetable, page number */
-	uint32_t hi = 0xfffff/sizeof (uint32_t) - 1;
-	uint32_t lo = 0;
+	uint32_t hi = ADDR_TO_PN(USER_MEM_HIGH);
+	uint32_t lo = ADDR_TO_PN(USER_MEM_LOW);
 	switch(dir){
 		case VMMAP_DIR_HILO:
 			list_iterate_reverse(&map->vmm_list,vma,vmarea_t,vma_plink){
@@ -129,7 +129,7 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 					return lo;
 				hi = vma->vma_start;
 			}list_iterate_end();
-			lo = 0x0;
+			lo = ADDR_TO_PN(USER_MEM_LOW);
 			if((hi-lo) > npages)
 				return lo;
 			break;
@@ -140,7 +140,7 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 					return lo;
 				lo = vma->vma_end;
 			}list_iterate_end();
-			hi = 0xfffff/sizeof (uint32_t) - 1;
+			hi = ADDR_TO_PN(USER_MEM_HIGH);
 			if((hi-lo) > npages)
 				return lo;
 			break;
