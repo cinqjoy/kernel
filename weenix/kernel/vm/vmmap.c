@@ -230,8 +230,8 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 {
 
 			int vfn;
-			mmobj_t * new_obj;
-			mmobj_t * shadow_obj;
+			mmobj_t * tmp_obj = NULL;
+			mmobj_t * shadow_obj = NULL;
 			proc_t * p = map->vmm_proc;
 			vmarea_t * new_vmarea = NULL;
 	
@@ -265,28 +265,28 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 
 			
 			if (file==NULL)
-			  	new_obj = anon_create();
+			  	tmp_obj = anon_create();
 			else
-				file->vn_ops->mmap(file, new_vmarea, &new_obj);
+				file->vn_ops->mmap(file, new_vmarea, &tmp_obj);
 
 			if ((flags & 0x00000002) ==MAP_PRIVATE)
 		 	{
 			  		shadow_obj = shadow_create();
-					shadow_obj->mmo_shadowed = new_obj;
-					new_obj->mmo_ops->ref(new_obj);
+					shadow_obj->mmo_shadowed = tmp_obj;
+					/*tmp_obj->mmo_ops->ref(tmp_obj);*/
 
-					shadow_obj->mmo_un.mmo_bottom_obj = new_obj;
-					new_obj->mmo_ops->ref(new_obj);
+					shadow_obj->mmo_un.mmo_bottom_obj = tmp_obj;
+					/*tmp_obj->mmo_ops->ref(tmp_obj);*/
 
 					new_vmarea->vma_obj = shadow_obj;
 
-					shadow_obj->mmo_ops->ref(shadow_obj);
+					/*shadow_obj->mmo_ops->ref(shadow_obj);*/
 			 }
 			 else
 			 { 
-			  		new_vmarea->vma_obj = new_obj;
+			  		new_vmarea->vma_obj = tmp_obj;
 
-					new_obj->mmo_ops->ref(new_obj);
+					/*tmp_obj->mmo_ops->ref(tmp_obj);*/
 			  
 			 }
 	
@@ -296,16 +296,20 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 			/* assign plink  */
 
 
-			new_obj->mmo_shadowed = NULL;
+			tmp_obj->mmo_shadowed = NULL;
 			
-			list_init(&new_obj->mmo_un.mmo_vmas);
-			list_insert_tail(&new_obj->mmo_un.mmo_vmas, &new_vmarea->vma_olink);
+			list_init(&tmp_obj->mmo_un.mmo_vmas);
+			list_insert_tail(&tmp_obj->mmo_un.mmo_vmas, &new_vmarea->vma_olink);
 
 			vmmap_insert(map, new_vmarea);
 
 
 			if (new != NULL)
-				*new = new_vmarea; 
+				*new = new_vmarea;
+
+			if (file != NULL)
+				tmp_obj->mmo_ops->put(tmp_obj);
+
 
 			return 0;	
 
