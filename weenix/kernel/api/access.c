@@ -157,21 +157,39 @@ int addr_perm(struct proc *p, const void *vaddr, int perm)
 int range_perm(struct proc *p, const void *avaddr, size_t len, int perm)
 {
         /*NOT_YET_IMPLEMENTED("VM: range_perm");*/
+
 	vmarea_t *myVmarea;
 	size_t tmp_len=0;
+	int i;
+
+	for(i=0; i*PAGE_SIZE<=len ;i++){
+		myVmarea = vmmap_lookup(p->p_vmmap,ADDR_TO_PN(avaddr)+i);
+		if(myVmarea == NULL)
+			return 0;
+		if((myVmarea->vma_prot&perm) != perm)
+			return 0;
+		if(i*PAGE_SIZE == len)
+			return 1;
+	}
+	if((i-1)*PAGE_SIZE < len)
+		return 1;
+	else return 0;
+
+	/*
         list_iterate_begin(&p->p_vmmap->vmm_list,myVmarea,vmarea_t,vma_plink){
-                if(PN_TO_ADDR(myVmarea->vma_start)<= (avaddr+tmp_len) && PN_TO_ADDR(myVmarea->vma_end)>= (avaddr+tmp_len)){
+                if((uint32_t)PN_TO_ADDR(myVmarea->vma_start)<= ((uint32_t)avaddr+tmp_len) && (uint32_t)PN_TO_ADDR(myVmarea->vma_end)>= ((uint32_t)avaddr+tmp_len)){
                         if((myVmarea->vma_prot&perm)!=perm)
                                 return 0;
                         
-			if(PN_TO_ADDR(myVmarea->vma_end)-(avaddr+tmp_len)+1>=len)
+			if((uint32_t)PN_TO_ADDR(myVmarea->vma_end)-((uint32_t)avaddr+tmp_len)+1>=len)
 				return 1;
 			else{
-				tmp_len = PN_TO_ADDR(myVmarea->vma_end)+1-(avaddr+tmp_len)+1;
+				tmp_len = (uint32_t)PN_TO_ADDR(myVmarea->vma_end)+1-((uint32_t)avaddr+tmp_len)+1;
 				len = len - tmp_len;
 			}	
                 }
         }list_iterate_end();
 	
 	return 0;
+	*/
 }

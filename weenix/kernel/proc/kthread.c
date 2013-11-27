@@ -225,8 +225,21 @@ kthread_exit(void *retval)
 kthread_t *
 kthread_clone(kthread_t *thr)
 {
-        NOT_YET_IMPLEMENTED("VM: kthread_clone");
-        return NULL;
+        /*NOT_YET_IMPLEMENTED("VM: kthread_clone");*/
+	kthread_t *clone_thr;
+	clone_thr = (kthread_t *) slab_obj_alloc(kthread_allocator);
+	clone_thr->kt_retval = thr->kt_retval;
+	clone_thr->kt_errno = thr->kt_errno;
+	clone_thr->kt_proc = thr->kt_proc;
+	clone_thr->kt_cancelled = thr->kt_cancelled;
+	clone_thr->kt_wchan = thr->kt_wchan;
+	list_insert_tail(&clone_thr->kt_proc->p_threads,&clone_thr->kt_plink);
+        
+	/*clone_thr->kt_detached = thr->kt_detached;
+	clone_thr->kt_joinq = thr->kt_joinq;*/
+	clone_thr->kt_kstack = alloc_stack();
+	clone_thr->kt_ctx = thr->kt_ctx;
+	return clone_thr;
 }
 
 /*

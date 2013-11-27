@@ -171,8 +171,32 @@ vmmap_lookup(vmmap_t *map, uint32_t vfn)
 vmmap_t *
 vmmap_clone(vmmap_t *map)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_clone");
-        return NULL;
+		vmmap_t * new_vmmap = NULL; 
+		vmarea_t * new_vmarea = NULL;
+		vmarea_t *vma = NULL;
+							
+		new_vmmap = vmmap_create();
+										
+		if (!list_empty(&map->vmm_list))
+		{
+
+			list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
+				new_vmarea = vmarea_alloc();
+				new_vmarea->vma_start = vma->vma_start;
+				new_vmarea->vma_end = vma->vma_end;
+				new_vmarea->vma_prot = vma->vma_prot;
+				new_vmarea->vma_flags = vma->vma_flags;
+				new_vmarea->vma_off = vma->vma_flags;
+				/* plink , vma_vmmap initialize */
+				vmmap_insert(new_vmmap, new_vmarea);
+				new_vmarea->vma_obj = NULL;
+				/* no need olink since obj is non-decided */
+			}list_iterate_end();
+		}																							
+		if (new_vmmap != NULL)
+			return new_vmmap;
+		else
+			return NULL;
 }
 
 /* Insert a mapping into the map starting at lopage for npages pages.
@@ -206,8 +230,8 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 {
 
 			int vfn;
-			mmobj_t * new_obj;
-			mmobj_t * shadow_obj;
+			mmobj_t * tmp_obj = NULL;
+			mmobj_t * shadow_obj = NULL;
 			proc_t * p = map->vmm_proc;
 			vmarea_t * new_vmarea = NULL;
 	
@@ -241,20 +265,28 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 
 			
 			if (file==NULL)
-			  	new_obj = anon_create();
+			  	tmp_obj = anon_create();
 			else
-				file->vn_ops->mmap(file, new_vmarea, &new_obj);
+				file->vn_ops->mmap(file, new_vmarea, &tmp_obj);
 
 			if ((flags & 0x00000002) ==MAP_PRIVATE)
 		 	{
 			  		shadow_obj = shadow_create();
-					shadow_obj->mmo_shadowed = new_obj;
-					shadow_obj->mmo_un.mmo_bottom_obj = new_obj;
+					shadow_obj->mmo_shadowed = tmp_obj;
+					/*tmp_obj->mmo_ops->ref(tmp_obj);*/
+
+					shadow_obj->mmo_un.mmo_bottom_obj = tmp_obj;
+					/*tmp_obj->mmo_ops->ref(tmp_obj);*/
+
 					new_vmarea->vma_obj = shadow_obj;
+
+					/*shadow_obj->mmo_ops->ref(shadow_obj);*/
 			 }
 			 else
 			 { 
-			  		new_vmarea->vma_obj = new_obj;
+			  		new_vmarea->vma_obj = tmp_obj;
+
+					/*tmp_obj->mmo_ops->ref(tmp_obj);*/
 			  
 			 }
 	
@@ -264,16 +296,20 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 			/* assign plink  */
 
 
-			new_obj->mmo_shadowed = NULL;
+			tmp_obj->mmo_shadowed = NULL;
 			
-			list_init(&new_obj->mmo_un.mmo_vmas);
-			list_insert_tail(&new_obj->mmo_un.mmo_vmas, &new_vmarea->vma_olink);
+			list_init(&tmp_obj->mmo_un.mmo_vmas);
+			list_insert_tail(&tmp_obj->mmo_un.mmo_vmas, &new_vmarea->vma_olink);
 
 			vmmap_insert(map, new_vmarea);
 
 
 			if (new != NULL)
-				*new = new_vmarea; 
+				*new = new_vmarea;
+
+			if (file != NULL)
+				tmp_obj->mmo_ops->put(tmp_obj);
+
 
 			return 0;	
 
@@ -338,7 +374,7 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 			newvma->vma_end = vma->vma_end;
 			vma->vma_end = lo-1;
 
-			vma->vma_obj->mmo_refcount++;
+			vma->vma_obj->mmo_ops->ref(vma->vma_obj);
 			newvma->vma_obj = vma->vma_obj;
 
 			vmmap_insert(map,newvma);
@@ -414,6 +450,7 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 				uint32_t pagenum;
 				uint32_t *pt_vaddr;				
 				uint32_t ppage_paddr;*/								
+				uint32_t poffset;
 				uint32_t pagenum;
 				/* ----- assume size is small than one page size 4KB -------*/
 				/*if ( (remainsize <=PAGE_SIZE)
@@ -436,7 +473,7 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 				ppage_paddr =pt_vaddr[v_ptindex];*/
 				
 				pagenum =  (((uint32_t)(vaddr)) >> PAGE_SHIFT) - vma->vma_start + vma->vma_off;
-
+				poffset =  (((uint32_t)(vaddr)) & 0x00000FFF);
 
 				
 				/*--read so don't care forwrite mode, assign = 1--*/	
@@ -444,12 +481,15 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 				{
 
 
-						memcpy(buf, pf->pf_addr, size);
+						memcpy(buf, (void*)(((uint32_t)pf->pf_addr) | poffset), size);
 						
 						/*return v->vn_ops->fillpage(v, (int)PN_TO_ADDR(pf->pf_pagenum), pf->pf_addr);*/
 						/*return v->vn_ops->fillpage(v, (int)PN_TO_ADDR(pf->pf_pagenum), pf->pf_addr);*/					
 						/*map->vmm_proc->p_pagedir->pd_virtual[pdindex] 
 						ppaddr = uintptr_t pt_virt_to_phys((uintptr_t) (*pf->pf_addr));*/
+
+						if (size == remainsize) /* read finish*/
+							return 0;
 					
 				}
 				else
@@ -492,6 +532,7 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 			uint32_t *pt_vaddr;				
 			uint32_t ppage_paddr;*/
 			uint32_t pagenum;
+			uint32_t poffset;
 			/* ----- assume size is small than one page size 4KB -------*/
 			/*if ( (remainsize <=PAGE_SIZE)
 			{
@@ -511,6 +552,7 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 			ppage_paddr =pt_vaddr[v_ptindex];*/
 			
 			pagenum =  (((uint32_t)(vaddr)) >> PAGE_SHIFT) - vma->vma_start + vma->vma_off;
+			poffset =  (((uint32_t)(vaddr)) & 0x00000FFF);
 
 			
 			/*--read so don't care forwrite mode, assign = 1--*/	
@@ -518,7 +560,9 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 			{
 	
 
-					memcpy(pf->pf_addr, buf, size);				
+					memcpy(  (void *) (((uint32_t)pf->pf_addr)| poffset), buf, size);				
+					if (size == remainsize) /* write finish */
+							return 0;
 			}
 			else
 				return -EFAULT;

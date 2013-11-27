@@ -56,6 +56,31 @@
 int
 do_brk(void *addr, void **ret)
 {
-        NOT_YET_IMPLEMENTED("VM: do_brk");
+        /*NOT_YET_IMPLEMENTED("VM: do_brk");*/
+	/*curproc->p_brk, curproc->p_start_brk*/
+	vmarea_t *myFrame;
+	if(addr==NULL){
+		*ret = curproc->p_brk;	
+	}else{
+		if(addr>USER_MEM_HIGH)
+         	       return -ENOMEM;
+        	/*KASSER |ADDR_TO_PN(curproc->p_brk)-ADDR_TO_PN(addr)|==1*/
+		if(ADDR_TO_PN(curproc->p_brk)==ADDR_TO_PN(addr)){
+			curproc->p_brk = addr;
+                        *ret = addr;
+			return 0;
+		}else{
+			if(vmmap_is_range_empty(curproc->p_vmmap,ADDR_TO_PN(curproc->p_brk)+1,ADDR_TO_PN(curproc->p_brk)+1)){
+                        	myFrame=vmmap_lookup(curproc->p_vmmap,ADDR_TO_PN(curproc->p_brk)+1);
+				if(myFrame!=NULL){
+					myFrame->vma_end++;
+					curproc->p_brk = addr;
+		                        *ret = addr;
+				}
+       	        	}else{
+	 	               return -EACCES;
+                	}
+		}
+	}
         return 0;
 }

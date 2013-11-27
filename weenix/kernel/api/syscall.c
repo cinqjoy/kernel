@@ -97,8 +97,8 @@ sys_write(write_args_t *arg)
 		curthr->kt_errno = -err;
 		return -1;
 	}
-	if((err = do_write(karg.fd, karg.buf, karg.nbytes))<0){
-		curthr->kt_errno = -err;
+	if((rbytes = do_write(karg.fd, karg.buf, karg.nbytes))<0){
+		curthr->kt_errno = -rbytes;
 		return -1;
 	}
 	if((err = copy_to_user(arg, &karg, sizeof(read_args_t)))<0){
@@ -106,7 +106,6 @@ sys_write(write_args_t *arg)
 		return -1;
 	}
 
-	rbytes = err;
 	return rbytes;
 }
 
