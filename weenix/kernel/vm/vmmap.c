@@ -119,30 +119,30 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 {
 	vmarea_t *vma;
 	/* the maximum entry of the pagetable, page number */
-	uint32_t hi = ADDR_TO_PN(USER_MEM_HIGH);
+	uint32_t hi = ADDR_TO_PN(USER_MEM_HIGH)-1;
 	uint32_t lo = ADDR_TO_PN(USER_MEM_LOW);
 
 	switch(dir){
 		case VMMAP_DIR_HILO:
 			list_iterate_reverse(&map->vmm_list,vma,vmarea_t,vma_plink){
 				lo = vma->vma_end+1;
-				if((hi-lo) > npages)
+				if((hi-lo+1) >= npages)
 					return lo;
-				hi = vma->vma_start;
+				hi = vma->vma_start-1;
 			}list_iterate_end();
 			lo = ADDR_TO_PN(USER_MEM_LOW);
-			if((hi-lo) > npages)
+			if((hi-lo+1) >= npages)
 				return lo;
 			break;
 		case VMMAP_DIR_LOHI:
 			list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
-				hi = vma->vma_start;
-				if((hi-lo) > npages)
+				hi = vma->vma_start-1;
+				if((hi-lo+1) >= npages)
 					return lo;
 				lo = vma->vma_end+1;
 			}list_iterate_end();
 			hi = ADDR_TO_PN(USER_MEM_HIGH);
-			if((hi-lo) > npages)
+			if((hi-lo+1) >= npages)
 				return lo;
 			break;
 		default:
@@ -350,6 +350,7 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 	uint32_t hi = lopage+npages-1;
 	uint32_t tmp;
 	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
+		if(lo > hi) return 0;
 		if((lo <= vma->vma_start) &&
 				(hi < vma->vma_end)){
 			/*case 3*/

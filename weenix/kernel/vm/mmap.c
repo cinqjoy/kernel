@@ -80,7 +80,7 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	 *        open in read/write (O_RDWR) mode.  Or PROT_WRITE is set, but
 	 *        the file is append-only.
 	 */
-	else if(!((vn->vn_mode & 0xFF00) == 0x0800) ||
+	else if(/*!((vn->vn_mode & 0xFF00) == 0x0800) ||*/
 			((flags & MAP_PRIVATE) == MAP_PRIVATE && (ft -> f_mode & FMODE_READ) != FMODE_READ) ||
 			(((flags & MAP_SHARED) == MAP_SHARED) && ((prot & PROT_WRITE) == PROT_WRITE) &&
 					!((ft->f_mode & (FMODE_READ|FMODE_WRITE)) == (FMODE_READ|FMODE_WRITE))) ||
