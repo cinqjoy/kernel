@@ -91,8 +91,8 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	 *        large, or not aligned on a page boundary).
 	 */
 	if(!PAGE_ALIGNED(off) ||
-			len > 0xfffff/sizeof(uint32_t) || len <= 0 ||
-			0 /*valid address*/) return -EINVAL;
+			len > (USER_MEM_HI-USER_MEM_LOW) || len <= 0 ||
+			addr >= USER_MEM_HI || (addr < USER_MEM_LOW && addr!=0)) return -EINVAL;
 
 	/*
 	 * ENODEV The underlying filesystem of the specified file does not
@@ -107,9 +107,21 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	/*
 	 * ENOMEM No memory is available, or the process's maximum number of
 	 *        mappings would have been exceeded.
-	 * This error should return by vmmap
+	 * This error should be returned by vmmap
 	 */
-	return vmmap_map(curproc->p_vmmap, vn, (uint32_t)addr, (uint32_t)len, prot, flags, off, VMMAP_DIR_LOHI, (vmarea_t **)ret);
+	uint32_t npages = len/PAGE_SIZE + (uint32_t)(len%PAGE_SIZE == 0)?0:1;
+	uint32_t lopage = ADDR_TO_PN(addr);
+	vmarea_t *vma;
+	int vmp_ret;
+	vmp_ret = vmmap_map(curproc->p_vmmap, vn, lopage, npages, prot, flags, off, VMMAP_DIR_LOHI, &vma);
+	if(vmp_ret < 0)
+		return vmp_ret;
+
+	int i;
+	for(i=0; i<npages; i++){
+		tlb_flush( PN_TO_ADDR(vma->vma_off+(uint32_t)i) );
+	}
+	*ret = PN_TO_ADDR(vma->vma_start);
 }
 
 
