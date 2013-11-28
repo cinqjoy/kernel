@@ -354,8 +354,8 @@ initproc_run(int arg1, void *arg2)
 		kernel_execve("/usr/bin/hello",argv,envp);
 		kernel_execve("/usr/bin/args",argv,envp);
 		kernel_execve("/bin/uname",argv,envp);
-*/
-		kernel_execve("/usr/bin/stress",argv,envp);
+*/		kernel_execve("/usr/bin/fork-and-wait",NULL,NULL);
+		/*kernel_execve("/usr/bin/stress",argv,envp);*/
 /*
         kshell_add_command("testproc",(kshell_cmd_func_t)testproc,"Ted Faber's tests");
         kshell_add_command("shtest",(kshell_cmd_func_t)sunghan_test,"sunghan's tests");
