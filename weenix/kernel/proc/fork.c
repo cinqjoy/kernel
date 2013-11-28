@@ -65,7 +65,7 @@ do_fork(struct regs *regs)
         vmarea_t *p_vma,*c_vma;
         for (p_link=curproc->p_vmmap->vmm_list.l_next,c_link=child_proc->p_vmmap->vmm_list.l_next;
              p_link!=&curproc->p_vmmap->vmm_list && c_link!=&child_proc->p_vmmap->vmm_list;
-             p_link=p_link->l_next,p_link=c_link->l_next){
+             p_link=p_link->l_next,c_link=c_link->l_next){
                 p_vma=list_item(p_link,vmarea_t,vma_plink);
                 c_vma=list_item(c_link,vmarea_t,vma_plink);
                 if(p_vma->vma_flags&MAP_SHARED){
