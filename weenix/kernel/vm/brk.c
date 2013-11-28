@@ -62,7 +62,7 @@ do_brk(void *addr, void **ret)
 	if(addr==NULL){
 		*ret = curproc->p_brk;	
 	}else{
-		if(addr>USER_MEM_HIGH)
+		if((uint32_t)addr>USER_MEM_HIGH)
          	       return -ENOMEM;
         	/*KASSER |ADDR_TO_PN(curproc->p_brk)-ADDR_TO_PN(addr)|==1*/
 		if(ADDR_TO_PN(curproc->p_brk)==ADDR_TO_PN(addr)){
