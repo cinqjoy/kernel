@@ -65,7 +65,7 @@ do_fork(struct regs *regs)
         vmarea_t *p_vma,*c_vma;
         for (p_link=curproc->p_vmmap->vmm_list.l_next,c_link=child_proc->p_vmmap->vmm_list.l_next;
              p_link!=&curproc->p_vmmap->vmm_list && c_link!=&child_proc->p_vmmap->vmm_list;
-             p_link=p_link->l_next,p_link=c_link->l_next){
+             p_link=p_link->l_next,c_link=c_link->l_next){
                 p_vma=list_item(p_link,vmarea_t,vma_plink);
                 c_vma=list_item(c_link,vmarea_t,vma_plink);
                 if(p_vma->vma_flags&MAP_SHARED){
@@ -88,7 +88,7 @@ do_fork(struct regs *regs)
 
         pt_unmap_range(curproc->p_pagedir,USER_MEM_LOW, USER_MEM_HIGH);
         tlb_flush_all();
-
+	list_insert_tail(&curproc->p_children,&child_proc->p_child_link);
         kthread_t *child_thread=kthread_clone(curthr);/* child_thread->kt_ctx->c_kstack */
         KASSERT(child_thread->kt_kstack != NULL);/* kernel stack is empty */
 

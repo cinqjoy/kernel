@@ -227,10 +227,15 @@ kthread_clone(kthread_t *thr)
 {
         /*NOT_YET_IMPLEMENTED("VM: kthread_clone");*/
 	kthread_t *clone_thr;
+	proc_t *p;
+
 	clone_thr = (kthread_t *) slab_obj_alloc(kthread_allocator);
 	clone_thr->kt_retval = thr->kt_retval;
 	clone_thr->kt_errno = thr->kt_errno;
-	/*clone_thr->kt_proc = thr->kt_proc;*/
+
+	p = list_tail(&thr->kt_proc->p_children,proc_t,p_child_link);
+	clone_thr->kt_proc = p;
+
 	clone_thr->kt_cancelled = thr->kt_cancelled;
 	clone_thr->kt_wchan = NULL;
 	list_insert_tail(&clone_thr->kt_proc->p_threads,&clone_thr->kt_plink);
