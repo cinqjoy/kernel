@@ -57,13 +57,14 @@ do_fork(struct regs *regs)
     	KASSERT(curproc->p_state == PROC_RUNNING);
 
     	int i;
+	/*int (*fp3)(struct regs*) = userland_entry;*/
         proc_t *child_proc=proc_create("child_process");
         child_proc->p_vmmap=vmmap_clone(curproc->p_vmmap);
 
         list_link_t *p_link,*c_link;
-        vmarea_t *p_vma,c_vma;
-        for (p_link=curproc->p_vmmap->vmm_list->l_next,c_link=child_proc->p_vmmap->vmm_list->l_next;
-             p_link!=curproc->p_vmmap->vmm_list,c_link!=child_proc->p_vmmap->vmm_list;
+        vmarea_t *p_vma,*c_vma;
+        for (p_link=curproc->p_vmmap->vmm_list.l_next,c_link=child_proc->p_vmmap->vmm_list.l_next;
+             p_link!=&curproc->p_vmmap->vmm_list && c_link!=&child_proc->p_vmmap->vmm_list;
              p_link=p_link->l_next,p_link=c_link->l_next){
                 p_vma=list_item(p_link,vmarea_t,vma_plink);
                 c_vma=list_item(c_link,vmarea_t,vma_plink);
@@ -73,7 +74,7 @@ do_fork(struct regs *regs)
                 	/*c_vma->vma_obj->mmo_ops->ref(c_vma->vma_obj);*/
                 }
                 else{
-                	mmobj_t *p_shadow,c_shadow;
+                	mmobj_t *p_shadow,*c_shadow;
         			p_shadow = shadow_create();c_shadow = shadow_create();
     				p_shadow->mmo_shadowed = p_vma->vma_obj;c_shadow->mmo_shadowed = p_vma->vma_obj;
     				/*tmp_obj->mmo_ops->ref(tmp_obj);*/
@@ -93,9 +94,9 @@ do_fork(struct regs *regs)
 
         child_thread->kt_ctx.c_pdptr=curthr->kt_ctx.c_pdptr;/* set the ptr to the page directory */
         child_thread->kt_ctx.c_kstacksz=curthr->kt_ctx.c_kstacksz;
-        child_thread->kt_ctx.c_esp=fork_setup_stack(regs,child_thread->kt_ctx.c_kstack);
+        child_thread->kt_ctx.c_esp=fork_setup_stack(regs,child_thread->kt_kstack);
         regs->r_eax=0;/* set the return value */
-        child_thread->kt_ctx.c_eip=userland_entry(regs);
+        child_thread->kt_ctx.c_eip=(uint32_t)userland_entry;
         child_thread->kt_proc=child_proc;
 
         for(i=0;i<NFILES;i++){/* copy the file table */
