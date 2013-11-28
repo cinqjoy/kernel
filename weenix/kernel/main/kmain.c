@@ -345,12 +345,17 @@ initproc_run(int arg1, void *arg2)
 		KASSERT(fd==1);
 		fd = do_open("/dev/tty0",O_WRONLY);
 		KASSERT(fd==2);
+
+
 		char *argv[] = {"uname","-a",NULL};
 		char *envp[] = {NULL};
-		/*kernel_execve("/usr/bin/mmt",argv,envp);*/
+
+/*		kernel_execve("/usr/bin/mmt",argv,envp);
 		kernel_execve("/usr/bin/hello",argv,envp);
-		/*kernel_execve("/usr/bin/args",argv,envp);
-		kernel_execve("/bin/uname",argv,envp);*/
+		kernel_execve("/usr/bin/args",argv,envp);
+		kernel_execve("/bin/uname",argv,envp);
+*/
+		kernel_execve("/usr/bin/stress",argv,envp);
 /*
         kshell_add_command("testproc",(kshell_cmd_func_t)testproc,"Ted Faber's tests");
         kshell_add_command("shtest",(kshell_cmd_func_t)sunghan_test,"sunghan's tests");

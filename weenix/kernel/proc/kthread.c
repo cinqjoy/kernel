@@ -230,13 +230,14 @@ kthread_clone(kthread_t *thr)
 	clone_thr = (kthread_t *) slab_obj_alloc(kthread_allocator);
 	clone_thr->kt_retval = thr->kt_retval;
 	clone_thr->kt_errno = thr->kt_errno;
-	clone_thr->kt_proc = thr->kt_proc;
+	/*clone_thr->kt_proc = thr->kt_proc;*/
 	clone_thr->kt_cancelled = thr->kt_cancelled;
-	clone_thr->kt_wchan = thr->kt_wchan;
+	clone_thr->kt_wchan = NULL;
 	list_insert_tail(&clone_thr->kt_proc->p_threads,&clone_thr->kt_plink);
-        
-	/*clone_thr->kt_detached = thr->kt_detached;
-	clone_thr->kt_joinq = thr->kt_joinq;*/
+#ifdef __MTP__ 
+	clone_thr->kt_detached = 0;
+	clone_thr->kt_joinq = NULL;
+#endif
 	clone_thr->kt_kstack = alloc_stack();
 	clone_thr->kt_ctx = thr->kt_ctx;
 	return clone_thr;
