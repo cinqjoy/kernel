@@ -88,7 +88,7 @@ do_fork(struct regs *regs)
 
         pt_unmap_range(curproc->p_pagedir,USER_MEM_LOW, USER_MEM_HIGH);
         tlb_flush_all();
-
+	list_insert_tail(&curproc->p_children,&child_proc->p_child_link);
         kthread_t *child_thread=kthread_clone(curthr);/* child_thread->kt_ctx->c_kstack */
         KASSERT(child_thread->kt_kstack != NULL);/* kernel stack is empty */
 
