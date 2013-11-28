@@ -119,17 +119,18 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 {
 	vmarea_t *vma;
 	/* the maximum entry of the pagetable, page number */
-	uint32_t hi = 0xfffff/sizeof (uint32_t) - 1;
-	uint32_t lo = 0;
+	uint32_t hi = ADDR_TO_PN(USER_MEM_HIGH);
+	uint32_t lo = ADDR_TO_PN(USER_MEM_LOW);
+
 	switch(dir){
 		case VMMAP_DIR_HILO:
 			list_iterate_reverse(&map->vmm_list,vma,vmarea_t,vma_plink){
-				lo = vma->vma_end;
+				lo = vma->vma_end+1;
 				if((hi-lo) > npages)
 					return lo;
 				hi = vma->vma_start;
 			}list_iterate_end();
-			lo = 0x0;
+			lo = ADDR_TO_PN(USER_MEM_LOW);
 			if((hi-lo) > npages)
 				return lo;
 			break;
@@ -138,9 +139,9 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 				hi = vma->vma_start;
 				if((hi-lo) > npages)
 					return lo;
-				lo = vma->vma_end;
+				lo = vma->vma_end+1;
 			}list_iterate_end();
-			hi = 0xfffff/sizeof (uint32_t) - 1;
+			hi = ADDR_TO_PN(USER_MEM_HIGH);
 			if((hi-lo) > npages)
 				return lo;
 			break;
@@ -273,21 +274,18 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 		 	{
 			  		shadow_obj = shadow_create();
 					shadow_obj->mmo_shadowed = tmp_obj;
-					/*tmp_obj->mmo_ops->ref(tmp_obj);*/
+					tmp_obj->mmo_ops->ref(tmp_obj);
 
 					shadow_obj->mmo_un.mmo_bottom_obj = tmp_obj;
-					/*tmp_obj->mmo_ops->ref(tmp_obj);*/
+					tmp_obj->mmo_ops->ref(tmp_obj);
 
 					new_vmarea->vma_obj = shadow_obj;
-
-					/*shadow_obj->mmo_ops->ref(shadow_obj);*/
+					shadow_obj->mmo_ops->ref(shadow_obj);
 			 }
 			 else
 			 { 
 			  		new_vmarea->vma_obj = tmp_obj;
-
-					/*tmp_obj->mmo_ops->ref(tmp_obj);*/
-			  
+					tmp_obj->mmo_ops->ref(tmp_obj);
 			 }
 	
 			/*list_init(&(*new)->vma_olink);

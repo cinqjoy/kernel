@@ -106,7 +106,12 @@ shadow_put(mmobj_t *o)
                 if (pframe_is_dirty(pf)) pframe_clean(pf);
                 pframe_free(pf);
 			}list_iterate_end();
-		}slab_obj_free(shadow_allocator,o);
+			KASSERT(o->mmo_shadowed != NULL);
+			o->mmo_shadowed->mmo_ops->put(o->mmo_shadowed);
+			KASSERT(o->mmo_un.mmo_bottom_obj != NULL);
+			o->mmo_un.mmo_bottom_obj->mmo_ops->put(o->mmo_un.mmo_bottom_obj);
+			slab_obj_free(shadow_allocator,o);
+		}
 }
 
 /* This function looks up the given page in this shadow object. The

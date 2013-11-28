@@ -43,8 +43,8 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	 * EINVAL flags contained neither MAP_PRIVATE or MAP_SHARED, or
 	 * 	      contained both of these values.
 	 */
-	if((flags & MAP_PRIVATE)!= MAP_PRIVATE ||
-			(flags & MAP_SHARED)!= MAP_SHARED ||
+	if(((flags & MAP_PRIVATE)!= MAP_PRIVATE &&
+			(flags & MAP_SHARED)!= MAP_SHARED) ||
 			(flags & (MAP_SHARED|MAP_PRIVATE)) == (MAP_SHARED|MAP_PRIVATE) )
 		return -EINVAL;
 
@@ -90,9 +90,9 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	 * EINVAL We don't like addr, length, or offset (e.g., they are too
 	 *        large, or not aligned on a page boundary).
 	 */
-	if(PAGE_ALIGNED(off) ||
-			len > 0xfffff/sizeof(uint32_t) || len <= 0 ||
-			0 /*valid address*/) return -EINVAL;
+	if(!PAGE_ALIGNED(off) ||
+			len > (USER_MEM_HIGH-USER_MEM_LOW) || len <= 0 ||
+			addr >= (void*)USER_MEM_HIGH || (addr < (void*)USER_MEM_LOW && addr!=(void*)0)) return -EINVAL;
 
 	/*
 	 * ENODEV The underlying filesystem of the specified file does not
@@ -107,9 +107,20 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	/*
 	 * ENOMEM No memory is available, or the process's maximum number of
 	 *        mappings would have been exceeded.
-	 * This error should return by vmmap
+	 * This error should be returned by vmmap
 	 */
-	return vmmap_map(curproc->p_vmmap, vn, (uint32_t)addr, (uint32_t)len, prot, flags, off, VMMAP_DIR_LOHI, (vmarea_t **)ret);
+	uint32_t npages = len/PAGE_SIZE + (uint32_t)(len%PAGE_SIZE == 0)?0:1;
+	uint32_t lopage = ADDR_TO_PN(addr);
+	vmarea_t *vma;
+	int vmp_ret;
+	vmp_ret = vmmap_map(curproc->p_vmmap, vn, lopage, npages, prot, flags, off, VMMAP_DIR_LOHI, &vma);
+	if(vmp_ret < 0)
+		return vmp_ret;
+
+	tlb_flush_range((uintptr_t)PN_TO_ADDR(vma->vma_off),npages);
+
+	*ret = PN_TO_ADDR(vma->vma_start);
+	return 0;
 }
 
 
@@ -125,9 +136,14 @@ do_munmap(void *addr, size_t len)
 {
 	/* valid address? Maximum length is 1024? */
 
-	if(len <= 0 || len > 0xfffff/sizeof(uint32_t)) return -EINVAL;
+	if(len <= 0 || len > (USER_MEM_HIGH-USER_MEM_LOW)
+	|| addr >= (void*)USER_MEM_HIGH || (addr < (void*)USER_MEM_LOW && addr!=(void*)0)) 
+		return -EINVAL;
+		
+	uint32_t npages = len/PAGE_SIZE + (uint32_t)(len%PAGE_SIZE == 0)?0:1;
+	uint32_t lopage = ADDR_TO_PN(addr);
 
-	return vmmap_remove(curproc->p_vmmap, (uint32_t)addr, len);
+	return vmmap_remove(curproc->p_vmmap, lopage, npages);
 
 }
 
