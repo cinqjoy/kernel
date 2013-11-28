@@ -436,11 +436,15 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 		vmarea_t *vma;
 		struct pframe *pf;
 		/* ------assume vaddr is 32 bits not ust 20 bits  -------*/
-		uintptr_t vmaaddr = ADDR_TO_PN(((uintptr_t)vaddr));
+		uintptr_t vma_saddr= (uintptr_t) vaddr;
+		uint32_t boffset = 0;
+		
 
 		
 		list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
-			if((vma->vma_start <= vmaaddr) && (vmaaddr <= vma->vma_end)  && (remainsize!=0) )
+			
+			uintptr_t vfs= ADDR_TO_PN(((uintptr_t)vma_saddr));
+			if((vma->vma_start <= vfs) && (vfs <= vma->vma_end)  && (remainsize!=0) )
 			{
 				size_t size;
 				/*uint32_t v_pdindex;
@@ -450,17 +454,24 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 				uint32_t ppage_paddr;*/								
 				uint32_t poffset;
 				uint32_t pagenum;
-				/* ----- assume size is small than one page size 4KB -------*/
-				/*if ( (remainsize <=PAGE_SIZE)
+
+				pagenum =  (((uint32_t)(vma_saddr)) >> PAGE_SHIFT) - vma->vma_start + vma->vma_off;
+				poffset =  (((uint32_t)(vma_saddr)) & 0x00000FFF);
+
+				
+				if (remainsize <=PAGE_SIZE *(vma->vma_end - vma->vma_start + 1) )/* located in one VMarea */
 				{
 					size = remainsize;
+					remainsize -= size;
+
 				}
-				else
+				else /* need to find another VMarea , preparing next vma_saddr which starting from current VMarea puls one*/
 				{
-					size = PAGE_SIZE;
-					reminisize -= size;
-				}*/
-				size = remainsize;
+					size = PAGE_SIZE *(vma->vma_end - vma->vma_start + 1);
+					vfs = vma->vma_end + 1;
+					vma_saddr = (uintptr_t) PN_TO_ADDR(vfs);
+					remainsize -= size;
+				}
 
 				/*v_pdindex = (((*(uint32_t *)(vaddr)) >> PAGE_SHIFT) / (PAGE_SIZE / sizeof (uint32_t)));
 				v_ptindex = (((*(uint32_t *)(vaddr)) >> PAGE_SHIFT) % (PAGE_SIZE / sizeof (uint32_t)));
@@ -470,23 +481,23 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 				pt_vaddr = pd->pd_virtual[v_pdindex];
 				ppage_paddr =pt_vaddr[v_ptindex];*/
 				
-				pagenum =  (((uint32_t)(vaddr)) >> PAGE_SHIFT) - vma->vma_start + vma->vma_off;
-				poffset =  (((uint32_t)(vaddr)) & 0x00000FFF);
 
 				
-				/*--read so don't care forwrite mode, assign = 1--*/	
+				/*--forwrite =1, performing read from page--*/	
 				if (!vma->vma_obj->mmo_ops->lookuppage(vma->vma_obj, pagenum, 0, &pf)) /* success */
 				{
 
 
-						memcpy(buf, (void*)(((uint32_t)pf->pf_addr) | poffset), size);
+						memcpy(  (void*)(((uint32_t)buf)+boffset), (void*)(((uint32_t)pf->pf_addr) | poffset), size);
+
+						boffset+=size;
 						
 						/*return v->vn_ops->fillpage(v, (int)PN_TO_ADDR(pf->pf_pagenum), pf->pf_addr);*/
 						/*return v->vn_ops->fillpage(v, (int)PN_TO_ADDR(pf->pf_pagenum), pf->pf_addr);*/					
 						/*map->vmm_proc->p_pagedir->pd_virtual[pdindex] 
 						ppaddr = uintptr_t pt_virt_to_phys((uintptr_t) (*pf->pf_addr));*/
 
-						if (size == remainsize) /* read finish*/
+						if (0 == remainsize) /* read finish*/
 							return 0;
 					
 				}
@@ -518,49 +529,69 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 	vmarea_t *vma;
 	struct pframe *pf;
 	/* ------assume vaddr is 32 bits not ust 20 bits  -------*/
-	uintptr_t vmaaddr = ADDR_TO_PN(((uintptr_t)vaddr));
+	uintptr_t vma_saddr= (uintptr_t) vaddr;
+	uint32_t boffset = 0;
+	
 	
 	
 	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
-		if((vma->vma_start <= vmaaddr) && (vmaaddr <= vma->vma_end)  && (remainsize!=0) )
+		
+		uintptr_t vfs= ADDR_TO_PN(((uintptr_t)vma_saddr));
+		if((vma->vma_start <= vfs) && (vfs <= vma->vma_end)  && (remainsize!=0) )
 		{
 			size_t size;
 			/*uint32_t v_pdindex;
 			uint32_t v_ptindex;
-			uint32_t *pt_vaddr;				
-			uint32_t ppage_paddr;*/
 			uint32_t pagenum;
+			uint32_t *pt_vaddr; 			
+			uint32_t ppage_paddr;*/ 							
 			uint32_t poffset;
-			/* ----- assume size is small than one page size 4KB -------*/
-			/*if ( (remainsize <=PAGE_SIZE)
+			uint32_t pagenum;
+	
+			pagenum =  (((uint32_t)(vma_saddr)) >> PAGE_SHIFT) - vma->vma_start + vma->vma_off;
+			poffset =  (((uint32_t)(vma_saddr)) & 0x00000FFF);
+	
+			
+			if (remainsize <=PAGE_SIZE *(vma->vma_end - vma->vma_start + 1) )/* located in one VMarea */
 			{
 				size = remainsize;
+				remainsize -= size;
+	
 			}
-			else
+			else /* need to find another VMarea , preparing next vma_saddr which starting from current VMarea puls one*/
 			{
-				size = PAGE_SIZE;
-				reminisize -= size;
-			}*/
-			size = remainsize;
+				size = PAGE_SIZE *(vma->vma_end - vma->vma_start + 1);
+				vfs = vma->vma_end + 1;
+				vma_saddr = (uintptr_t) PN_TO_ADDR(vfs);
+				remainsize -= size;
+			}
 	
 			/*v_pdindex = (((*(uint32_t *)(vaddr)) >> PAGE_SHIFT) / (PAGE_SIZE / sizeof (uint32_t)));
 			v_ptindex = (((*(uint32_t *)(vaddr)) >> PAGE_SHIFT) % (PAGE_SIZE / sizeof (uint32_t)));
 	
-			pt_vaddr = (uint32_t *)(map->vmm_proc->p_pagedir->pd_virtual[v_pdindex]);
+	
+			pd = map->vmm_proc->p_pagedir;
+			pt_vaddr = pd->pd_virtual[v_pdindex];
 			ppage_paddr =pt_vaddr[v_ptindex];*/
 			
-			pagenum =  (((uint32_t)(vaddr)) >> PAGE_SHIFT) - vma->vma_start + vma->vma_off;
-			poffset =  (((uint32_t)(vaddr)) & 0x00000FFF);
-
+	
 			
-			/*--read so don't care forwrite mode, assign = 1--*/	
+			/*--forwrite =1, performing write to page--*/	
 			if (!vma->vma_obj->mmo_ops->lookuppage(vma->vma_obj, pagenum, 1, &pf)) /* success */
 			{
 	
-
-					memcpy(  (void *) (((uint32_t)pf->pf_addr)| poffset), buf, size);				
-					if (size == remainsize) /* write finish */
-							return 0;
+	
+					memcpy(  (void *) (((uint32_t)pf->pf_addr)| poffset),(void*)(((uint32_t)buf)+boffset), size);
+					boffset+=size;	
+					
+					/*return v->vn_ops->fillpage(v, (int)PN_TO_ADDR(pf->pf_pagenum), pf->pf_addr);*/
+					/*return v->vn_ops->fillpage(v, (int)PN_TO_ADDR(pf->pf_pagenum), pf->pf_addr);*/					
+					/*map->vmm_proc->p_pagedir->pd_virtual[pdindex] 
+					ppaddr = uintptr_t pt_virt_to_phys((uintptr_t) (*pf->pf_addr));*/
+	
+					if (0 == remainsize) /* read finish*/
+						return 0;
+				
 			}
 			else
 				return -EFAULT;
@@ -568,7 +599,6 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 		}
 		
 	}list_iterate_end();
-	
 	
 	return 0;
 }
