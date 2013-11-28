@@ -88,8 +88,7 @@ anon_put(mmobj_t *o)
         /*NOT_YET_IMPLEMENTED("VM: anon_put");*/
 	/* add KAASSERT to check whether the mmobj is anonymous and whether the refcount is ess the number of resident pages*/
 	pframe_t *myFrame;
-	/*o->refcount--;*/
-	o->mmo_ops->put(o);
+	o->mmo_refcount--;
 	if(o->mmo_refcount==o->mmo_nrespages){
 		list_iterate_begin(&o->mmo_respages, myFrame, pframe_t, pf_olink) {
 			while(pframe_is_pinned(myFrame)){
@@ -101,10 +100,10 @@ anon_put(mmobj_t *o)
 			if(pframe_is_dirty(myFrame)){
 				pframe_clean(myFrame);
 			}
-			
+
 			pframe_free(myFrame);
 		} list_iterate_end();
-                slab_obj_free(anon_allocator,o);
+		slab_obj_free(anon_allocator,o);
 	}
 }
 
