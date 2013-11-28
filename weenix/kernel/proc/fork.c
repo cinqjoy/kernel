@@ -52,6 +52,65 @@ fork_setup_stack(const regs_t *regs, void *kstack)
 int
 do_fork(struct regs *regs)
 {
-        NOT_YET_IMPLEMENTED("VM: do_fork");
-        return 0;
+    	KASSERT(regs != NULL);
+    	KASSERT(curproc != NULL);
+    	KASSERT(curproc->p_state == PROC_RUNNING);
+
+    	int i;
+        proc_t *child_proc=proc_create("child_process");
+        child_proc->p_vmmap=vmmap_clone(curproc->p_vmmap);
+
+        list_link_t *p_link,*c_link;
+        vmarea_t *p_vma,c_vma;
+        for (p_link=curproc->p_vmmap->vmm_list->l_next,c_link=child_proc->p_vmmap->vmm_list->l_next;
+             p_link!=curproc->p_vmmap->vmm_list,c_link!=child_proc->p_vmmap->vmm_list;
+             p_link=p_link->l_next,p_link=c_link->l_next){
+                p_vma=list_item(p_link,vmarea_t,vma_plink);
+                c_vma=list_item(c_link,vmarea_t,vma_plink);
+                if(p_vma->vma_flags&MAP_SHARED){
+                	c_vma->vma_obj=p_vma->vma_obj;
+                	list_insert_tail(&c_vma->vma_obj->mmo_un.mmo_vmas,&c_vma->vma_olink);
+                	/*c_vma->vma_obj->mmo_ops->ref(c_vma->vma_obj);*/
+                }
+                else{
+                	mmobj_t *p_shadow,c_shadow;
+        			p_shadow = shadow_create();c_shadow = shadow_create();
+    				p_shadow->mmo_shadowed = p_vma->vma_obj;c_shadow->mmo_shadowed = p_vma->vma_obj;
+    				/*tmp_obj->mmo_ops->ref(tmp_obj);*/
+    				p_shadow->mmo_un.mmo_bottom_obj = p_vma->vma_obj->mmo_un.mmo_bottom_obj;
+    				c_shadow->mmo_un.mmo_bottom_obj = p_vma->vma_obj->mmo_un.mmo_bottom_obj;
+    				/*tmp_obj->mmo_ops->ref(tmp_obj);*/
+    				p_vma->vma_obj = p_shadow;
+    				c_vma->vma_obj = c_shadow;
+                }
+        }
+
+        pt_unmap_range(curproc->p_pagedir,USER_MEM_LOW, USER_MEM_HIGH);
+        tlb_flush_all();
+
+        kthread_t *child_thread=kthread_clone(curthr);/* child_thread->kt_ctx->c_kstack */
+        KASSERT(child_thread->kt_kstack != NULL);/* kernel stack is empty */
+
+        child_thread->kt_ctx.c_pdptr=curthr->kt_ctx.c_pdptr;/* set the ptr to the page directory */
+        child_thread->kt_ctx.c_kstacksz=curthr->kt_ctx.c_kstacksz;
+        child_thread->kt_ctx.c_esp=fork_setup_stack(regs,child_thread->kt_ctx.c_kstack);
+        regs->r_eax=0;/* set the return value */
+        child_thread->kt_ctx.c_eip=userland_entry(regs);
+        child_thread->kt_proc=child_proc;
+
+        for(i=0;i<NFILES;i++){/* copy the file table */
+        	child_proc->p_files[i]=curproc->p_files[i];
+        	if(curproc->p_files[i]) fref(curproc->p_files[i]);
+        }
+
+        child_proc->p_status=curproc->p_status;
+        child_proc->p_state=curproc->p_state;
+        child_proc->p_cwd=curproc->p_cwd;/* set the child's working directory*/
+        vref(curproc->p_cwd);
+        child_proc->p_pagedir=curproc->p_pagedir;
+        KASSERT(child_proc->p_state == PROC_RUNNING);
+        KASSERT(child_proc->p_pagedir != NULL);
+
+        sched_make_runnable(child_thread);
+        return child_proc->p_pid;
 }
