@@ -349,6 +349,7 @@ initproc_run(int arg1, void *arg2)
 
 		char *argv[] = {"uname","-a",NULL};
 		char *envp[] = {NULL};
+
 /*		kernel_execve("/usr/bin/mmt",argv,envp);
 		kernel_execve("/usr/bin/hello",argv,envp);
 		kernel_execve("/usr/bin/args",argv,envp);

@@ -71,13 +71,13 @@ sys_read(read_args_t *arg)
 		curthr->kt_errno = -err;
 		return -1;
 	}
-	if((err = copy_to_user(arg, &karg, sizeof(read_args_t)))<0){
+	rbytes = err;
+	if((err = copy_to_user(arg->buf, karg.buf, rbytes))<0){
 		curthr->kt_errno = -err;
 		return -1;
 	}
 	page_free(karg.buf);
 
-	rbytes = err;
 	return rbytes;
 }
 
