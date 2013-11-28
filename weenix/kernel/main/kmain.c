@@ -355,7 +355,7 @@ initproc_run(int arg1, void *arg2)
 		kernel_execve("/usr/bin/args",argv,envp);
 		kernel_execve("/bin/uname",argv,envp);
 
-*/		kernel_execve("/usr/bin/fork-and-wait",NULL,NULL);
+*/		kernel_execve("/usr/bin/fork-and-wait",argv,envp);
 		/*kernel_execve("/usr/bin/stress",argv,envp);*/
 
 /*
