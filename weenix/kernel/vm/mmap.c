@@ -91,8 +91,8 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	 *        large, or not aligned on a page boundary).
 	 */
 	if(!PAGE_ALIGNED(off) ||
-			len > (USER_MEM_HI-USER_MEM_LOW) || len <= 0 ||
-			addr >= USER_MEM_HI || (addr < USER_MEM_LOW && addr!=0)) return -EINVAL;
+			len > (USER_MEM_HIGH-USER_MEM_LOW) || len <= 0 ||
+			addr >= (void*)USER_MEM_HIGH || (addr < (void*)USER_MEM_LOW && addr!=(void*)0)) return -EINVAL;
 
 	/*
 	 * ENODEV The underlying filesystem of the specified file does not
@@ -117,11 +117,10 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	if(vmp_ret < 0)
 		return vmp_ret;
 
-	int i;
-	for(i=0; i<npages; i++){
-		tlb_flush( PN_TO_ADDR(vma->vma_off+(uint32_t)i) );
-	}
+	tlb_flush_range((uintptr_t)PN_TO_ADDR(vma->vma_off),npages);
+
 	*ret = PN_TO_ADDR(vma->vma_start);
+	return 0;
 }
 
 
@@ -137,9 +136,14 @@ do_munmap(void *addr, size_t len)
 {
 	/* valid address? Maximum length is 1024? */
 
-	if(len <= 0 || len > 0xfffff/sizeof(uint32_t)) return -EINVAL;
+	if(len <= 0 || len > (USER_MEM_HIGH-USER_MEM_LOW)
+	|| addr >= (void*)USER_MEM_HIGH || (addr < (void*)USER_MEM_LOW && addr!=(void*)0)) 
+		return -EINVAL;
+		
+	uint32_t npages = len/PAGE_SIZE + (uint32_t)(len%PAGE_SIZE == 0)?0:1;
+	uint32_t lopage = ADDR_TO_PN(addr);
 
-	return vmmap_remove(curproc->p_vmmap, (uint32_t)addr, len);
+	return vmmap_remove(curproc->p_vmmap, lopage, npages);
 
 }
 
