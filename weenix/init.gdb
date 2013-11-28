@@ -6,7 +6,7 @@ break bootstrap
 add-symbol-file user/usr/bin/stress.exec 0x08048094
 
 b vref if (vn->vn_vno==13)
-
+b zero_mmap
 b main
 
 
