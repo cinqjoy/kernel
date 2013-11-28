@@ -239,7 +239,15 @@ kthread_clone(kthread_t *thr)
 	clone_thr->kt_joinq = NULL;
 #endif
 	clone_thr->kt_kstack = alloc_stack();
-	clone_thr->kt_ctx = thr->kt_ctx;
+	/*clone_thr->kt_ctx = thr->kt_ctx;
+	clone_thr->kt_ctx->c_kstack = clone_thr->kt_kstack;*/
+	context_setup(&(clone_thr->kt_ctx),
+			NULL,
+			0,
+			0,
+			(void *) clone_thr->kt_kstack,
+			DEFAULT_STACK_SIZE,
+			clone_thr->kt_proc->p_pagedir);
 	return clone_thr;
 }
 
