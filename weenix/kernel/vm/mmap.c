@@ -109,17 +109,16 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	 *        mappings would have been exceeded.
 	 * This error should be returned by vmmap
 	 */
-	uint32_t npages = len/PAGE_SIZE + (uint32_t)(len%PAGE_SIZE == 0)?0:1;
+	uint32_t npages = len/PAGE_SIZE + ((uint32_t)(len%PAGE_SIZE == 0)?0:1);
 	uint32_t lopage = ADDR_TO_PN(addr);
 	vmarea_t *vma;
 	int vmp_ret;
+
 	vmp_ret = vmmap_map(curproc->p_vmmap, vn, lopage, npages, prot, flags, off, VMMAP_DIR_LOHI, &vma);
 	if(vmp_ret < 0)
 		return vmp_ret;
-
-	tlb_flush_range((uintptr_t)PN_TO_ADDR(vma->vma_off),npages);
-
 	*ret = PN_TO_ADDR(vma->vma_start);
+	tlb_flush_range((uintptr_t)*ret, npages);
 	return 0;
 }
 
@@ -140,10 +139,16 @@ do_munmap(void *addr, size_t len)
 	|| addr >= (void*)USER_MEM_HIGH || (addr < (void*)USER_MEM_LOW && addr!=(void*)0)) 
 		return -EINVAL;
 		
-	uint32_t npages = len/PAGE_SIZE + (uint32_t)(len%PAGE_SIZE == 0)?0:1;
+	uint32_t npages = len/PAGE_SIZE + ((uint32_t)(len%PAGE_SIZE == 0))?0:1;
 	uint32_t lopage = ADDR_TO_PN(addr);
 
-	return vmmap_remove(curproc->p_vmmap, lopage, npages);
+	
+
+
+	tlb_flush_range((uintptr_t)addr,npages);
+	int vmp_ret = vmmap_remove(curproc->p_vmmap, lopage, npages);
+	if(vmp_ret < 0) return vmp_ret;
+	return 0;
 
 }
 
