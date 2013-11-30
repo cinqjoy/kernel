@@ -127,10 +127,10 @@ shadow_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 		pframe_t *tmp_pf;
 		list_iterate_begin(&o->mmo_respages,tmp_pf,pframe_t,pf_olink){
 			if(tmp_pf->pf_pagenum==pagenum&&tmp_pf->pf_obj==o){
-				if(pframe_is_dirty(tmp_pf)){
+				/*if(pframe_is_dirty(tmp_pf)){
 					pframe_free(tmp_pf);
 					return pframe_get(o,pagenum,pf);
-				}
+				}*/
 				*pf=tmp_pf;
 				return 0;
 			}
