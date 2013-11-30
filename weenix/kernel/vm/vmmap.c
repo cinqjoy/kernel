@@ -583,7 +583,8 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 	
 	
 					memcpy(  (void *) (((uint32_t)pf->pf_addr)| poffset),(void*)(((uint32_t)buf)+boffset), size);
-					boffset+=size;	
+					boffset+=size;
+					vma->vma_obj->mmo_ops->dirtypage(vma->vma_obj,pf);
 					
 					/*return v->vn_ops->fillpage(v, (int)PN_TO_ADDR(pf->pf_pagenum), pf->pf_addr);*/
 					/*return v->vn_ops->fillpage(v, (int)PN_TO_ADDR(pf->pf_pagenum), pf->pf_addr);*/					

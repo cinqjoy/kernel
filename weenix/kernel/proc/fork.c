@@ -86,19 +86,20 @@ do_fork(struct regs *regs)
                 }
         }
 
-        pt_unmap_range(curproc->p_pagedir,USER_MEM_LOW, USER_MEM_HIGH);
+        /*pt_unmap_range(curproc->p_pagedir,USER_MEM_LOW, USER_MEM_HIGH);*/
         tlb_flush_all();
 	list_insert_tail(&curproc->p_children,&child_proc->p_child_link);
-        kthread_t *child_thread=kthread_clone(curthr);/* child_thread->kt_ctx->c_kstack */
-        KASSERT(child_thread->kt_kstack != NULL);/* kernel stack is empty */
+        
+		
+		kthread_t *child_thread=kthread_clone(curthr);
+        KASSERT(child_thread->kt_kstack != NULL);
 
-        child_thread->kt_ctx.c_pdptr=curthr->kt_ctx.c_pdptr;/* set the ptr to the page directory */
+        child_thread->kt_ctx.c_pdptr=curthr->kt_ctx.c_pdptr;
         child_thread->kt_ctx.c_kstacksz=curthr->kt_ctx.c_kstacksz;
         child_thread->kt_ctx.c_esp=fork_setup_stack(regs,child_thread->kt_kstack);
-        regs->r_eax=0;/* set the return value */
         child_thread->kt_ctx.c_eip=(uint32_t)userland_entry;
         child_thread->kt_proc=child_proc;
-
+		
         for(i=0;i<NFILES;i++){/* copy the file table */
         	child_proc->p_files[i]=curproc->p_files[i];
         	if(curproc->p_files[i]) fref(curproc->p_files[i]);

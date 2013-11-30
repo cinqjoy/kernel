@@ -101,10 +101,10 @@ sys_write(write_args_t *arg)
 		curthr->kt_errno = -rbytes;
 		return -1;
 	}
-	if((err = copy_to_user(arg, &karg, sizeof(read_args_t)))<0){
+	/*if((err = copy_to_user(arg, &karg, sizeof(read_args_t)))<0){
 		curthr->kt_errno = -err;
 		return -1;
-	}
+	}*/
 
 	return rbytes;
 }
