@@ -75,14 +75,15 @@ do_fork(struct regs *regs)
                 }
                 else{
                 	mmobj_t *p_shadow,*c_shadow;
-        			p_shadow = shadow_create();c_shadow = shadow_create();
-    				p_shadow->mmo_shadowed = p_vma->vma_obj;c_shadow->mmo_shadowed = p_vma->vma_obj;
-    				/*tmp_obj->mmo_ops->ref(tmp_obj);*/
-    				p_shadow->mmo_un.mmo_bottom_obj = p_vma->vma_obj->mmo_un.mmo_bottom_obj;
-    				c_shadow->mmo_un.mmo_bottom_obj = p_vma->vma_obj->mmo_un.mmo_bottom_obj;
-    				/*tmp_obj->mmo_ops->ref(tmp_obj);*/
-    				p_vma->vma_obj = p_shadow;
-    				c_vma->vma_obj = c_shadow;
+        		p_shadow = shadow_create();c_shadow = shadow_create();
+    			p_shadow->mmo_shadowed = p_vma->vma_obj;c_shadow->mmo_shadowed = p_vma->vma_obj;
+    			/*tmp_obj->mmo_ops->ref(tmp_obj);*/
+    			p_shadow->mmo_un.mmo_bottom_obj = p_vma->vma_obj->mmo_un.mmo_bottom_obj;
+    			c_shadow->mmo_un.mmo_bottom_obj = p_vma->vma_obj->mmo_un.mmo_bottom_obj;
+    			/*tmp_obj->mmo_ops->ref(tmp_obj);*/
+    			p_vma->vma_obj = p_shadow;
+    			c_vma->vma_obj = c_shadow;
+			list_insert_tail(&c_vma->vma_obj->mmo_un.mmo_bottom_obj->mmo_un.mmo_vmas,&c_vma->vma_olink);
                 }
         }
 
@@ -96,7 +97,7 @@ do_fork(struct regs *regs)
 
         child_thread->kt_ctx.c_pdptr=curthr->kt_ctx.c_pdptr;
         child_thread->kt_ctx.c_kstacksz=curthr->kt_ctx.c_kstacksz;
-        child_thread->kt_ctx.c_esp=fork_setup_stack(regs,child_thread->kt_kstack);
+        child_thread->kt_ctx.c_esp=fork_setup_stack(regs,child_thread->kt_kstack);    
         child_thread->kt_ctx.c_eip=(uint32_t)userland_entry;
         child_thread->kt_proc=child_proc;
 		
@@ -107,10 +108,10 @@ do_fork(struct regs *regs)
 
         child_proc->p_status=curproc->p_status;
         child_proc->p_state=curproc->p_state;
+	KASSERT(child_proc->p_state == PROC_RUNNING);
         child_proc->p_cwd=curproc->p_cwd;/* set the child's working directory*/
         vref(curproc->p_cwd);
-        child_proc->p_pagedir=curproc->p_pagedir;
-        KASSERT(child_proc->p_state == PROC_RUNNING);
+        child_proc->p_pagedir=curproc->p_pagedir;     
         KASSERT(child_proc->p_pagedir != NULL);
 
         sched_make_runnable(child_thread);
