@@ -130,10 +130,10 @@ anon_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 					*pf = myFrame;
 					return 0;
 				}
-		        }list_iterate_end();
+		    }list_iterate_end();
 			return pframe_get(o,pagenum,pf);
 		}else{
-			return 0;
+			return pframe_get(o,pagenum,pf);
 		}
 
 	}

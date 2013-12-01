@@ -71,12 +71,13 @@ handle_pagefault(uintptr_t vaddr, uint32_t cause)
 	/* find the vmarea(remember shadow obj), search for correct page */
 	pframe_t *pf;
 	if(vmarea->vma_flags&MAP_PRIVATE){
-		if(vmarea->vma_obj->mmo_ops->lookuppage(vmarea->vma_obj,ADDR_TO_PN(vaddr)-vmarea->vma_start+vmarea->vma_off,cause&FAULT_WRITE,&pf)<0){
+		if(vmarea->vma_obj->mmo_ops->lookuppage(vmarea->vma_obj,ADDR_TO_PN(vaddr)-vmarea->vma_start+vmarea->vma_off,(cause&FAULT_WRITE)==FAULT_WRITE,&pf)<0){
 			return;
 		}
 	}
 	else{
-		if(pframe_get(vmarea->vma_obj,ADDR_TO_PN(vaddr)-vmarea->vma_start+vmarea->vma_off,&pf)<0){
+		if(vmarea->vma_obj->mmo_ops->lookuppage(vmarea->vma_obj,ADDR_TO_PN(vaddr)-vmarea->vma_start+vmarea->vma_off,(cause&FAULT_WRITE)==FAULT_WRITE,&pf)<0){
+		/*if(pframe_get(vmarea->vma_obj,ADDR_TO_PN(vaddr)-vmarea->vma_start+vmarea->vma_off,&pf)<0){*/
 			return;
 		}
 	}

@@ -617,7 +617,8 @@ vmmap_mapping_info(const void *vmmap, char *buf, size_t osize)
         vmarea_t *vma;
         ssize_t size = (ssize_t)osize;
 
-        int len = snprintf(buf, size, "%21s %5s %7s %8s %10s %12s\n",
+        int len = snprintf(buf, size, "curproc:%d(%s)\n%21s %5s %7s %8s %10s %12s\n",
+							curproc->p_pid,curproc->p_comm,
                            "VADDR RANGE", "PROT", "FLAGS", "MMOBJ", "OFFSET",
                            "VFN RANGE");
 

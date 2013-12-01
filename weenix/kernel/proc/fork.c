@@ -63,7 +63,6 @@ do_fork(struct regs *regs)
 
         list_link_t *p_link,*c_link;
         vmarea_t *p_vma,*c_vma;
-        tlb_flush_all();
         for (p_link=curproc->p_vmmap->vmm_list.l_next,c_link=child_proc->p_vmmap->vmm_list.l_next;
              p_link!=&curproc->p_vmmap->vmm_list && c_link!=&child_proc->p_vmmap->vmm_list;
              p_link=p_link->l_next,c_link=c_link->l_next){
@@ -89,12 +88,13 @@ do_fork(struct regs *regs)
                 }
 		
 		if(p_vma->vma_prot&PROT_WRITE){
-			if(p_vma->vma_start==p_vma->vma_end) /*pt_unmap(curproc->p_pagedir,(uintptr_t)PN_TO_ADDR(p_vma->vma_start))*/;
+			if(p_vma->vma_start==p_vma->vma_end) pt_unmap(curproc->p_pagedir,(uintptr_t)PN_TO_ADDR(p_vma->vma_start));
 			else pt_unmap_range(curproc->p_pagedir,(uintptr_t)PN_TO_ADDR(p_vma->vma_start),(uintptr_t)PN_TO_ADDR(p_vma->vma_end));
 		}
 		
         }
 
+        tlb_flush_all();
         /*pt_unmap_range(curproc->p_pagedir,USER_MEM_LOW, USER_MEM_HIGH);*/
 	/*list_init(&child_proc->p_child_link);
 	list_insert_tail(&curproc->p_children,&child_proc->p_child_link);*/

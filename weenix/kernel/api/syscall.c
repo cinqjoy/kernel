@@ -97,6 +97,13 @@ sys_write(write_args_t *arg)
 		curthr->kt_errno = -err;
 		return -1;
 	}
+	
+	karg.buf = page_alloc();
+
+	if((err = copy_from_user(karg.buf, arg->buf, karg.nbytes))<0){
+		curthr->kt_errno = -err;
+		return -1;
+	}
 	if((rbytes = do_write(karg.fd, karg.buf, karg.nbytes))<0){
 		curthr->kt_errno = -rbytes;
 		return -1;
@@ -105,6 +112,7 @@ sys_write(write_args_t *arg)
 		curthr->kt_errno = -err;
 		return -1;
 	}*/
+	page_free(karg.buf);
 
 	return rbytes;
 }
