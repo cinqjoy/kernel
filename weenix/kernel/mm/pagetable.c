@@ -160,7 +160,17 @@ pt_unmap_range(pagedir_t *pd, uintptr_t vlow, uintptr_t vhigh)
         KASSERT(vlow < vhigh);
         KASSERT(PAGE_ALIGNED(vlow) && PAGE_ALIGNED(vhigh));
         KASSERT(USER_MEM_LOW <= vlow && USER_MEM_HIGH >= vhigh);
-
+	/*
+	if(vaddr_to_pdindex(vlow) == vaddr_to_pdindex(vhigh)){
+		if (PT_PRESENT & pd->pd_physical[vaddr_to_pdindex(vlow)] 
+			&& vaddr_to_ptindex(vlow) != 0 && vaddr_to_ptindex(vhigh) != 0) {
+		        pte_t *pt = (pte_t *)pd->pd_virtual[vaddr_to_pdindex(vlow)];
+		        size_t size = (vaddr_to_ptindex(vhigh) - vaddr_to_ptindex(vlow)+1) * sizeof(*pt);
+		        memset(&pt[vaddr_to_ptindex(vlow)], 0, size);
+        	}
+		return;
+	}
+	*/
         index = vaddr_to_ptindex(vlow);
         if (PT_PRESENT & pd->pd_physical[vaddr_to_pdindex(vlow)] && index != 0) {
                 pte_t *pt = (pte_t *)pd->pd_virtual[vaddr_to_pdindex(vlow)];

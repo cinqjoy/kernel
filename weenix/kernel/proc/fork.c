@@ -63,6 +63,7 @@ do_fork(struct regs *regs)
 
         list_link_t *p_link,*c_link;
         vmarea_t *p_vma,*c_vma;
+        tlb_flush_all();
         for (p_link=curproc->p_vmmap->vmm_list.l_next,c_link=child_proc->p_vmmap->vmm_list.l_next;
              p_link!=&curproc->p_vmmap->vmm_list && c_link!=&child_proc->p_vmmap->vmm_list;
              p_link=p_link->l_next,c_link=c_link->l_next){
@@ -81,14 +82,20 @@ do_fork(struct regs *regs)
     			p_shadow->mmo_un.mmo_bottom_obj = p_vma->vma_obj->mmo_un.mmo_bottom_obj;
     			c_shadow->mmo_un.mmo_bottom_obj = p_vma->vma_obj->mmo_un.mmo_bottom_obj;
     			/*tmp_obj->mmo_ops->ref(tmp_obj);*/
+			/*p_vma->vma_obj->mmo_ops->dirtypage(p_vma->vma_obj,p_vma->vma_obj->mmo_un.mmo_bottom_obj->mmo_respages);*/
     			p_vma->vma_obj = p_shadow;
     			c_vma->vma_obj = c_shadow;
 			list_insert_tail(&c_vma->vma_obj->mmo_un.mmo_bottom_obj->mmo_un.mmo_vmas,&c_vma->vma_olink);
                 }
+		
+		if(p_vma->vma_prot&PROT_WRITE){
+			if(p_vma->vma_start==p_vma->vma_end) /*pt_unmap(curproc->p_pagedir,(uintptr_t)PN_TO_ADDR(p_vma->vma_start))*/;
+			else pt_unmap_range(curproc->p_pagedir,(uintptr_t)PN_TO_ADDR(p_vma->vma_start),(uintptr_t)PN_TO_ADDR(p_vma->vma_end));
+		}
+		
         }
 
         /*pt_unmap_range(curproc->p_pagedir,USER_MEM_LOW, USER_MEM_HIGH);*/
-        tlb_flush_all();
 	/*list_init(&child_proc->p_child_link);
 	list_insert_tail(&curproc->p_children,&child_proc->p_child_link);*/
         
