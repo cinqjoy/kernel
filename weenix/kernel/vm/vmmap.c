@@ -187,7 +187,7 @@ vmmap_clone(vmmap_t *map)
 				new_vmarea->vma_end = vma->vma_end;
 				new_vmarea->vma_prot = vma->vma_prot;
 				new_vmarea->vma_flags = vma->vma_flags;
-				new_vmarea->vma_off = vma->vma_flags;
+				new_vmarea->vma_off = vma->vma_off;
 				/* plink , vma_vmmap initialize */
 				vmmap_insert(new_vmmap, new_vmarea);
 				new_vmarea->vma_obj = NULL;

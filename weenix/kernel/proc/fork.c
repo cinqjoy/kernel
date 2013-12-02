@@ -71,19 +71,23 @@ do_fork(struct regs *regs)
                 if(p_vma->vma_flags&MAP_SHARED){
                 	c_vma->vma_obj=p_vma->vma_obj;
                 	list_insert_tail(&c_vma->vma_obj->mmo_un.mmo_vmas,&c_vma->vma_olink);
-                	/*c_vma->vma_obj->mmo_ops->ref(c_vma->vma_obj);*/
+                	c_vma->vma_obj->mmo_ops->ref(c_vma->vma_obj);
                 }
                 else{
                 	mmobj_t *p_shadow,*c_shadow;
         		p_shadow = shadow_create();c_shadow = shadow_create();
     			p_shadow->mmo_shadowed = p_vma->vma_obj;c_shadow->mmo_shadowed = p_vma->vma_obj;
-    			/*tmp_obj->mmo_ops->ref(tmp_obj);*/
+    			p_vma->vma_obj->mmo_ops->ref(p_vma->vma_obj);
+			p_vma->vma_obj->mmo_ops->ref(p_vma->vma_obj);
     			p_shadow->mmo_un.mmo_bottom_obj = p_vma->vma_obj->mmo_un.mmo_bottom_obj;
     			c_shadow->mmo_un.mmo_bottom_obj = p_vma->vma_obj->mmo_un.mmo_bottom_obj;
-    			/*tmp_obj->mmo_ops->ref(tmp_obj);*/
+    			p_shadow->mmo_un.mmo_bottom_obj->mmo_ops->ref(p_shadow->mmo_un.mmo_bottom_obj);
+			c_shadow->mmo_un.mmo_bottom_obj->mmo_ops->ref(c_shadow->mmo_un.mmo_bottom_obj);
 			/*p_vma->vma_obj->mmo_ops->dirtypage(p_vma->vma_obj,p_vma->vma_obj->mmo_un.mmo_bottom_obj->mmo_respages);*/
     			p_vma->vma_obj = p_shadow;
     			c_vma->vma_obj = c_shadow;
+			p_shadow->mmo_ops->ref(p_shadow);
+			c_shadow->mmo_ops->ref(c_shadow);
 			list_insert_tail(&c_vma->vma_obj->mmo_un.mmo_bottom_obj->mmo_un.mmo_vmas,&c_vma->vma_olink);
                 }
 		/*
