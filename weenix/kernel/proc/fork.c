@@ -59,6 +59,7 @@ do_fork(struct regs *regs)
     	int i;
 	/*int (*fp3)(struct regs*) = userland_entry;*/
         proc_t *child_proc=proc_create("child_process");
+	if(!child_proc->p_vmmap) vmmap_destroy(child_proc->p_vmmap);
         child_proc->p_vmmap=vmmap_clone(curproc->p_vmmap);
 
         list_link_t *p_link,*c_link;
@@ -86,8 +87,8 @@ do_fork(struct regs *regs)
 			/*p_vma->vma_obj->mmo_ops->dirtypage(p_vma->vma_obj,p_vma->vma_obj->mmo_un.mmo_bottom_obj->mmo_respages);*/
     			p_vma->vma_obj = p_shadow;
     			c_vma->vma_obj = c_shadow;
-			p_shadow->mmo_ops->ref(p_shadow);
-			c_shadow->mmo_ops->ref(c_shadow);
+			/*p_shadow->mmo_ops->ref(p_shadow);
+			c_shadow->mmo_ops->ref(c_shadow);*/
 			list_insert_tail(&c_vma->vma_obj->mmo_un.mmo_bottom_obj->mmo_un.mmo_vmas,&c_vma->vma_olink);
                 }
 		/*
@@ -107,6 +108,7 @@ do_fork(struct regs *regs)
 
         child_thread->kt_ctx.c_pdptr= child_proc->p_pagedir;
         child_thread->kt_ctx.c_kstacksz=curthr->kt_ctx.c_kstacksz;
+	regs->r_eax=0;
         child_thread->kt_ctx.c_esp=fork_setup_stack(regs,child_thread->kt_kstack);    
         child_thread->kt_ctx.c_eip=(uint32_t)userland_entry;
         child_thread->kt_proc=child_proc;

@@ -88,9 +88,7 @@ static int
 sys_write(write_args_t *arg)
 {
 	write_args_t karg;
-	int rbytes;
-
-	int err;
+	int err,rbytes;
 
 
 	if((err = copy_from_user(&karg, arg, sizeof(write_args_t)))<0){
@@ -130,7 +128,7 @@ static int
 sys_getdents(getdents_args_t *arg)
 {
 	getdents_args_t karg;
-	int err;
+	int err,ret;
 	size_t offset=0;
 
 	if((err = copy_from_user(&karg, arg, sizeof(getdents_args_t)))<0){
@@ -140,11 +138,11 @@ sys_getdents(getdents_args_t *arg)
 
 	dirent_t dir;
 	while(1){
-		if((err = do_getdent(karg.fd, &dir)) < 0){
+		if((ret = do_getdent(karg.fd, &dir)) < 0){
 			curthr->kt_errno = -err;
 			return -1;
 		}
-		offset+=err;
+		offset+=ret;
 		if(offset>=karg.count) break;
 	}
 	if((err = copy_to_user(arg->dirp,&dir,sizeof(dirent_t)))<0){
@@ -152,7 +150,7 @@ sys_getdents(getdents_args_t *arg)
 		return -1;
 	}
 
-	return 0;
+	return offset;
 }
 
 #ifdef __MOUNTING__

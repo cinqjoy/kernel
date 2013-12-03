@@ -96,16 +96,17 @@ shadow_ref(mmobj_t *o)
 static void
 shadow_put(mmobj_t *o)
 {
-		KASSERT(o && (0 < o->mmo_refcount) && (&shadow_mmobj_ops == o->mmo_ops));
-		o->mmo_refcount--;
-		if(o->mmo_refcount==o->mmo_nrespages){
+		KASSERT(o && (0 < o->mmo_refcount) && (&shadow_mmobj_ops == o->mmo_ops));		
+		if((o->mmo_refcount-1)==o->mmo_nrespages){
 			pframe_t *pf;
 			list_iterate_begin(&o->mmo_respages,pf,pframe_t,pf_olink){
-				while(pframe_is_pinned(pf)) pframe_unpin(pf);
-                if (pframe_is_busy(pf)) sched_sleep_on(&pf->pf_waitq);
-                if (pframe_is_dirty(pf)) pframe_clean(pf);
-                pframe_free(pf);
+				if(pframe_is_pinned(pf)) pframe_unpin(pf);
+                		while(pframe_is_busy(pf)) sched_sleep_on(&pf->pf_waitq);
+                		if(pframe_is_dirty(pf)) pframe_clean(pf);
+                		pframe_free(pf);
 			}list_iterate_end();
+		}o->mmo_refcount--;
+		if(o->mmo_refcount==0){
 			KASSERT(o->mmo_shadowed != NULL);
 			o->mmo_shadowed->mmo_ops->put(o->mmo_shadowed);
 			KASSERT(o->mmo_un.mmo_bottom_obj != NULL);

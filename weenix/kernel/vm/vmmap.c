@@ -274,13 +274,13 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 		 	{
 			  		shadow_obj = shadow_create();
 					shadow_obj->mmo_shadowed = tmp_obj;
-					tmp_obj->mmo_ops->ref(tmp_obj);
+					if(file!=NULL) tmp_obj->mmo_ops->ref(tmp_obj);
 
 					shadow_obj->mmo_un.mmo_bottom_obj = tmp_obj;
 					tmp_obj->mmo_ops->ref(tmp_obj);
 
 					new_vmarea->vma_obj = shadow_obj;
-					shadow_obj->mmo_ops->ref(shadow_obj);
+					/*shadow_obj->mmo_ops->ref(shadow_obj);*/
 			 }
 			 else
 			 { 

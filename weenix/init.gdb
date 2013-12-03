@@ -3,10 +3,8 @@ break dbg_panic_halt
 break hard_shutdown
 break bootstrap
 
-add-symbol-file user/usr/bin/fork-and-wait.exec 0x08048094
+add-symbol-file user/sbin/init.exec 0x08048094
 
-b vref if (vn->vn_vno==13)
-b zero_mmap
 b main
 
 

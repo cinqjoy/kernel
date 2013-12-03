@@ -88,13 +88,13 @@ anon_put(mmobj_t *o)
         /*NOT_YET_IMPLEMENTED("VM: anon_put");*/
 	/* add KAASSERT to check whether the mmobj is anonymous and whether the refcount is ess the number of resident pages*/
 	pframe_t *myFrame;
-	o->mmo_refcount--;
-	if(o->mmo_refcount==o->mmo_nrespages){
+	
+	if(o->mmo_refcount-1==o->mmo_nrespages){
 		list_iterate_begin(&o->mmo_respages, myFrame, pframe_t, pf_olink) {
-			while(pframe_is_pinned(myFrame)){
+			if(pframe_is_pinned(myFrame)){
 				pframe_unpin(myFrame);
 			}
-			if(pframe_is_busy(myFrame)){
+			while(pframe_is_busy(myFrame)){
 				sched_sleep_on(&myFrame->pf_waitq);
 			}
 			if(pframe_is_dirty(myFrame)){
@@ -102,9 +102,9 @@ anon_put(mmobj_t *o)
 			}
 
 			pframe_free(myFrame);
-		} list_iterate_end();
-		slab_obj_free(anon_allocator,o);
-	}
+		} list_iterate_end();	
+	}o->mmo_refcount--;
+	if(o->mmo_refcount==0) slab_obj_free(anon_allocator,o);
 }
 
 /* Get the corresponding page from the mmobj. No special handling is

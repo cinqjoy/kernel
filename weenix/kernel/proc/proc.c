@@ -289,6 +289,8 @@ proc_thread_exited(void *retval)
 			dbg(DBG_THR,"The thread (0x%p) exited from the proc \"%s\" %d (0x%p)\n",
 					curthr, curproc->p_comm, curproc->p_pid, curproc);
 		}
+	
+	vmmap_destroy(curproc->p_vmmap);
 }
 
 /* If pid is -1 dispose of one of the exited children of the current
@@ -369,6 +371,7 @@ do_waitpid(pid_t pid, int options, int *status)
 				KASSERT(NULL != myProc->p_pagedir); /* this process should have pagedir */
 				dbg(DBG_PROC,"(GRADING1 2.c) This process should have pagedir.\n");
 				pt_destroy_pagedir(myProc->p_pagedir);
+				vput(myProc->p_cwd);
 				slab_obj_free(proc_allocator,myProc);
 				return myPid;
 			}
