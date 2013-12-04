@@ -118,6 +118,8 @@ do_fork(struct regs *regs)
         	if(curproc->p_files[i]) fref(curproc->p_files[i]);
         }
 
+	child_proc->p_brk=curproc->p_brk;
+	child_proc->p_start_brk=curproc->p_start_brk;
         child_proc->p_status=curproc->p_status;
         child_proc->p_state=curproc->p_state;
 		KASSERT(child_proc->p_state == PROC_RUNNING);

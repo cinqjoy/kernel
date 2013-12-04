@@ -71,7 +71,7 @@ do_brk(void *addr, void **ret)
 			return 0;
 		}else{
 			if(vmmap_is_range_empty(curproc->p_vmmap,ADDR_TO_PN(curproc->p_brk)+1,ADDR_TO_PN(curproc->p_brk)+1)){
-                        	myFrame=vmmap_lookup(curproc->p_vmmap,ADDR_TO_PN(curproc->p_brk)+1);
+                        	myFrame=vmmap_lookup(curproc->p_vmmap,ADDR_TO_PN(curproc->p_brk));
 				if(myFrame!=NULL){
 					myFrame->vma_end++;
 					curproc->p_brk = addr;
