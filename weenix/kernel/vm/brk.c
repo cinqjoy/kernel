@@ -53,34 +53,42 @@
  * Note that this function "returns" the new break through the "ret" argument.
  * Return 0 on success, -errno on failure.
  */
-int
+	int
 do_brk(void *addr, void **ret)
 {
-        /*NOT_YET_IMPLEMENTED("VM: do_brk");*/
+	/*NOT_YET_IMPLEMENTED("VM: do_brk");*/
 	/*curproc->p_brk, curproc->p_start_brk*/
+
+	uint32_t cur = ADDR_TO_PN(curproc->p_brk);
+	uint32_t in = ADDR_TO_PN(addr);
+	uint32_t start = ADDR_TO_PN(curproc->p_start_brk);
+
 	vmarea_t *myFrame;
 	if(addr==NULL){
 		*ret = curproc->p_brk;	
 	}else{
+
+		KASSERT(in >= start);
 		if((uint32_t)addr>USER_MEM_HIGH)
-         	       return -ENOMEM;
-        	/*KASSER |ADDR_TO_PN(curproc->p_brk)-ADDR_TO_PN(addr)|==1*/
-		if(ADDR_TO_PN(curproc->p_brk)==ADDR_TO_PN(addr)){
+			return -ENOMEM;
+		/*KASSERT((ADDR_TO_PN(addr)-ADDR_TO_PN(curproc->p_brk)) <= 1);*/
+		if(cur >= in){
 			curproc->p_brk = addr;
-                        *ret = addr;
+			*ret = addr;
 			return 0;
 		}else{
-			if(vmmap_is_range_empty(curproc->p_vmmap,ADDR_TO_PN(curproc->p_brk)+1,ADDR_TO_PN(curproc->p_brk)+1)){
-                        	myFrame=vmmap_lookup(curproc->p_vmmap,ADDR_TO_PN(curproc->p_brk));
+			if(vmmap_is_range_empty(curproc->p_vmmap,cur+1,in)){
+				myFrame=vmmap_lookup(curproc->p_vmmap,cur);
+				KASSERT(myFrame != NULL);
 				if(myFrame!=NULL){
-					myFrame->vma_end++;
+					myFrame->vma_end += in-cur;
 					curproc->p_brk = addr;
-		                        *ret = addr;
+					*ret = addr;
 				}
-       	        	}else{
-	 	               return -EACCES;
-                	}
+			}else{
+				return -EACCES;
+			}
 		}
 	}
-        return 0;
+	return 0;
 }
