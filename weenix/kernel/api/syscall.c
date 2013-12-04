@@ -131,22 +131,23 @@ sys_getdents(getdents_args_t *arg)
 	int err,ret;
 	size_t offset=0;
 
-	if((err = copy_from_user(&karg, arg, sizeof(getdents_args_t)))<0){
-		curthr->kt_errno = -err;
+	if((err=copy_from_user(&karg,arg,sizeof(getdents_args_t)))<0){
+		curthr->kt_errno=-err;
 		return -1;
 	}
-
+	
 	dirent_t dir;
-	while(1){
-		if((ret = do_getdent(karg.fd, &dir)) < 0){
-			curthr->kt_errno = -err;
+	while(offset<karg.count){
+		if((ret=do_getdent(karg.fd, &dir))<0){
+			curthr->kt_errno=-err;
 			return -1;
 		}
 		offset+=ret;
-		if(offset>=karg.count) break;
+		if(ret==0) break;
 	}
-	if((err = copy_to_user(arg->dirp,&dir,sizeof(dirent_t)))<0){
-		curthr->kt_errno = -err;
+
+	if((err=copy_to_user(arg->dirp,&dir,sizeof(dirent_t)))<0){
+		curthr->kt_errno=-err;
 		return -1;
 	}
 
