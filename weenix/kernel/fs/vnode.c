@@ -481,6 +481,14 @@ special_file_write(vnode_t *file, off_t offset, const void *buf, size_t count)
 static int
 special_file_mmap(vnode_t *file, vmarea_t *vma, mmobj_t **ret)
 {
+	KASSERT(file);
+	dbg(DBG_PRINT, "(GRADING3A 5.a) file is not null.\n");
+	KASSERT(S_ISCHR(file->vn_mode) && "because these ops only assigned if vnode represents a special file");
+	dbg(DBG_PRINT, "(GRADING3A 5.a) the file is a on character mode.\n");
+	KASSERT((file->vn_cdev) && "because open shouldn\'t have let us arrive here if vn_cdev was NULL");
+	dbg(DBG_PRINT, "(GRADING3A 5.a) the file has character device.\n");
+	KASSERT(file->vn_cdev->cd_ops && file->vn_cdev->cd_ops->mmap);
+	dbg(DBG_PRINT, "(GRADING3A 5.a) the file has its own operations and its mapping operation is set.\n");
 	return file->vn_cdev->cd_ops->mmap(file, vma, ret);
 }
 
@@ -505,6 +513,14 @@ special_file_stat(vnode_t *vnode, struct stat *ss)
 static int
 special_file_fillpage(vnode_t *file, off_t offset, void *pagebuf)
 {
+	KASSERT(file);
+	dbg(DBG_PRINT, "(GRADING3A 5.b) file is not null.\n");
+	KASSERT(S_ISCHR(file->vn_mode));
+	dbg(DBG_PRINT, "(GRADING3A 5.b) the file is a on character mode.\n");
+	KASSERT((file->vn_cdev));
+	dbg(DBG_PRINT, "(GRADING3A 5.b) the file has character device.\n");
+	KASSERT(file->vn_cdev->cd_ops && file->vn_cdev->cd_ops->fillpage);
+	dbg(DBG_PRINT, "(GRADING3A 5.b) the file has its own operations and its fillpage operation is set.\n");
 	return file->vn_cdev->cd_ops->fillpage(file, offset, pagebuf);
 }
 
@@ -516,6 +532,14 @@ special_file_fillpage(vnode_t *file, off_t offset, void *pagebuf)
 static int
 special_file_dirtypage(vnode_t *file, off_t offset)
 {
+	KASSERT(file);
+	dbg(DBG_PRINT, "(GRADING3A 5.c) file is not null.\n");
+	KASSERT(S_ISCHR(file->vn_mode));
+	dbg(DBG_PRINT, "(GRADING3A 5.c) the file is a on character mode.\n");
+	KASSERT((file->vn_cdev));
+	dbg(DBG_PRINT, "(GRADING3A 5.c) the file has character device.\n");
+	(precondition) KASSERT(file->vn_cdev->cd_ops && file->vn_cdev->cd_ops->dirtypage);
+	dbg(DBG_PRINT, "(GRADING3A 5.c) the file has its own operations and its dirtypage operation is set.\n");
 	return file->vn_cdev->cd_ops->dirtypage(file, offset);
 }
 
@@ -527,6 +551,14 @@ special_file_dirtypage(vnode_t *file, off_t offset)
 static int
 special_file_cleanpage(vnode_t *file, off_t offset, void *pagebuf)
 {
+	KASSERT(file);
+	dbg(DBG_PRINT, "(GRADING3A 5.d) file is not null.\n");
+	KASSERT(S_ISCHR(file->vn_mode));
+	dbg(DBG_PRINT, "(GRADING3A 5.d) the file is a on character mode.\n");
+	KASSERT((file->vn_cdev));
+	dbg(DBG_PRINT, "(GRADING3A 5.d) the file has character device.\n");
+	(precondition) KASSERT(file->vn_cdev->cd_ops && file->vn_cdev->cd_ops->cleanpage);
+	dbg(DBG_PRINT, "(GRADING3A 5.d) the file has its own operations and its cleanpage operation is set.\n");
 	return file->vn_cdev->cd_ops->cleanpage(file, offset, pagebuf);
 }
 

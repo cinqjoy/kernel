@@ -226,6 +226,8 @@ kthread_t *
 kthread_clone(kthread_t *thr)
 {
         /*NOT_YET_IMPLEMENTED("VM: kthread_clone");*/
+	KASSERT(KT_RUN == thr->kt_state);
+	dbg(DBG_PRINT, "(GRADING3A 8.a) the thread state is run\n ");
 	kthread_t *clone_thr;
 	proc_t *p;
 
@@ -253,6 +255,8 @@ kthread_clone(kthread_t *thr)
 			(void *) clone_thr->kt_kstack,
 			DEFAULT_STACK_SIZE,
 			clone_thr->kt_proc->p_pagedir);
+	KASSERT(KT_RUN == newthr->kt_state);
+	dbg(DBG_PRINT, "(GRADING3A 8.a) the new thread state is run\n ");
 	return clone_thr;
 }
 

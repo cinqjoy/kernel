@@ -77,6 +77,8 @@ vmmap_create(void)
 void
 vmmap_destroy(vmmap_t *map)
 {
+	KASSERT(NULL != map);
+	dbg(DBG_PRINT, "(GRADING3A 3.a) map is not null.\n");
 	vmarea_t * vma;
 	while(!list_empty(&map->vmm_list)){
 		vma = list_head(&map->vmm_list,vmarea_t,vma_plink);
@@ -94,6 +96,14 @@ vmmap_insert(vmmap_t *map, vmarea_t *newvma)
 {
 	/* assert vmarea is valid */
 	/* newvma->vma_obj cannot be NULL */
+	KASSERT(NULL != map && NULL != newvma);
+	dbg(DBG_PRINT, "(GRADING3A 3.b) Both of map and newvma are not NULL.\n");
+	KASSERT(NULL == newvma->vma_vmmap);
+	dbg(DBG_PRINT, "(GRADING3A 3.b) newvma->vma_vmmap is NULL.\n");
+	KASSERT(newvma->vma_start < newvma->vma_end);
+	dbg(DBG_PRINT, "(GRADING3A 3.b) The end addr of vma is greater than the start addr of vma.\n");
+	KASSERT(ADDR_TO_PN(USER_MEM_LOW) <= newvma->vma_start && ADDR_TO_PN(USER_MEM_HIGH) >= newvma->vma_end);
+	dbg(DBG_PRINT, "(GRADING3A 3.b) The range of the newvma is inside the range of user memmory.\n");
 
 	vmarea_t * vma;
 	newvma->vma_vmmap = map;
@@ -119,6 +129,10 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 {
 	vmarea_t *vma;
 	/* the maximum entry of the pagetable, page number */
+	KASSERT(NULL != map);
+	dbg(DBG_PRINT, "(GRADING3A 3.c) map is not null.\n");
+	KASSERT(0 < npages);
+	dbg(DBG_PRINT, "(GRADING3A 3.c) number of pages is greater than 0.\n");
 	uint32_t hi = ADDR_TO_PN(USER_MEM_HIGH)-1;
 	uint32_t lo = ADDR_TO_PN(USER_MEM_LOW);
 
@@ -157,6 +171,8 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 vmarea_t *
 vmmap_lookup(vmmap_t *map, uint32_t vfn)
 {
+	KASSERT(NULL != map);
+	dbg(DBG_PRINT, "(GRADING3A 3.d) map is not null.\n");
 	vmarea_t * vma;
 	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
 		if(vma->vma_start <= vfn && vfn <= vma->vma_end)
@@ -229,7 +245,21 @@ int
 vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
           int prot, int flags, off_t off, int dir, vmarea_t **new)
 {
-
+			KASSERT(NULL != map);
+			dbg(DBG_PRINT, "(GRADING3A 3.f) map is not null.\n");
+			KASSERT(0 < npages);
+			dbg(DBG_PRINT, "(GRADING3A 3.f) number of pages is greater than 0.\n");
+			KASSERT(!(~(PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC) & prot));
+			dbg(DBG_PRINT, "(GRADING3A 3.f) prot belongs to one of four status.\n");
+			KASSERT((MAP_SHARED & flags) || (MAP_PRIVATE & flags));
+			dbg(DBG_PRINT, "(GRADING3A 3.f) the status of flags is shared or private.\n");	
+			KASSERT((0 == lopage) || (ADDR_TO_PN(USER_MEM_LOW) <= lopage));
+			dbg(DBG_PRINT, "(GRADING3A 3.f) lower bound page equals to 0 or it's greater than the lower bound of user memory\n");
+			KASSERT((0 == lopage) || (ADDR_TO_PN(USER_MEM_HIGH) >= (lopage + npages)));
+			dbg(DBG_PRINT, "(GRADING3A 3.f) lower bound page equals to 0 or the pages allocated is not greater than the upper bound of user memory.\n");	
+			KASSERT(PAGE_ALIGNED(off));
+			dbg(DBG_PRINT, "(GRADING3A 3.f) the offset is page aligned.\n");	
+			
 			int vfn;
 			mmobj_t * tmp_obj = NULL;
 			mmobj_t * shadow_obj = NULL;
@@ -406,7 +436,8 @@ vmmap_is_range_empty(vmmap_t *map, uint32_t startvfn, uint32_t npages)
 	 */
 
 	/* assert npages != 0 */
-
+	KASSERT((startvfn < endvfn) && (ADDR_TO_PN(USER_MEM_LOW) <= startvfn) && (ADDR_TO_PN(USER_MEM_HIGH) >= endvfn));
+	dbg(DBG_PRINT, "(GRADING3A 3e) end frame is greater than the start frame and the frames are inside user memory.\n");
 	vmarea_t *vma;
 	uint32_t hi = startvfn+npages-1;
 	uint32_t lo = startvfn;
