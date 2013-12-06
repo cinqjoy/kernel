@@ -59,7 +59,7 @@ do_fork(struct regs *regs)
     	int i;
 	/*int (*fp3)(struct regs*) = userland_entry;*/
         proc_t *child_proc=proc_create("child_process");
-	if(!child_proc->p_vmmap) vmmap_destroy(child_proc->p_vmmap);
+	if(child_proc->p_vmmap!=NULL) vmmap_destroy(child_proc->p_vmmap);
         child_proc->p_vmmap=vmmap_clone(curproc->p_vmmap);
 
         list_link_t *p_link,*c_link;
