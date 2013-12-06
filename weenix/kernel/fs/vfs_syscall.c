@@ -570,7 +570,7 @@ do_link(const char *from, const char *to)
     /*diffeernt order from dir_namev */
     /*call open_namev */
 	/*ret = open_namev(from, O_CREAT || O_RDWR , &fromv, NULL);*/
-	ret = open_namev(from, O_WRONLY , &fromv, NULL);
+	ret = open_namev(from, 0 , &fromv, NULL);
 
 
 	if (ret !=0  ){
@@ -578,6 +578,13 @@ do_link(const char *from, const char *to)
 			return ret;
 	}
 	/*assume old path must exists according to linux spec*/
+
+	if ( (fromv != NULL) && (S_ISDIR(fromv->vn_mode)) ) 
+	{
+			vput(fromv);
+			TEST_DBG("DO_LINK_OUT\n");
+			return -EISDIR; 
+	}
 
 	/*vput(fromv);*/
 
@@ -607,7 +614,7 @@ do_link(const char *from, const char *to)
 		vput(dir);
 		vput(result);
 		TEST_DBG("DO_LINK_OUT\n");
-		return -EEXIST;
+			return -EEXIST;
 	}
 	else
 	{
