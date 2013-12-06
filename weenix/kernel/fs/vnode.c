@@ -538,7 +538,7 @@ special_file_dirtypage(vnode_t *file, off_t offset)
 	dbg(DBG_PRINT, "(GRADING3A 5.c) the file is a on character mode.\n");
 	KASSERT((file->vn_cdev));
 	dbg(DBG_PRINT, "(GRADING3A 5.c) the file has character device.\n");
-	(precondition) KASSERT(file->vn_cdev->cd_ops && file->vn_cdev->cd_ops->dirtypage);
+	KASSERT(file->vn_cdev->cd_ops && file->vn_cdev->cd_ops->dirtypage);
 	dbg(DBG_PRINT, "(GRADING3A 5.c) the file has its own operations and its dirtypage operation is set.\n");
 	return file->vn_cdev->cd_ops->dirtypage(file, offset);
 }
@@ -557,7 +557,7 @@ special_file_cleanpage(vnode_t *file, off_t offset, void *pagebuf)
 	dbg(DBG_PRINT, "(GRADING3A 5.d) the file is a on character mode.\n");
 	KASSERT((file->vn_cdev));
 	dbg(DBG_PRINT, "(GRADING3A 5.d) the file has character device.\n");
-	(precondition) KASSERT(file->vn_cdev->cd_ops && file->vn_cdev->cd_ops->cleanpage);
+	KASSERT(file->vn_cdev->cd_ops && file->vn_cdev->cd_ops->cleanpage);
 	dbg(DBG_PRINT, "(GRADING3A 5.d) the file has its own operations and its cleanpage operation is set.\n");
 	return file->vn_cdev->cd_ops->cleanpage(file, offset, pagebuf);
 }

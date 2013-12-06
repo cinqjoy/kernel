@@ -436,8 +436,9 @@ vmmap_is_range_empty(vmmap_t *map, uint32_t startvfn, uint32_t npages)
 	 */
 
 	/* assert npages != 0 */
+	uint32_t endvfn = startvfn+npages;
 	KASSERT((startvfn < endvfn) && (ADDR_TO_PN(USER_MEM_LOW) <= startvfn) && (ADDR_TO_PN(USER_MEM_HIGH) >= endvfn));
-	dbg(DBG_PRINT, "(GRADING3A 3e) end frame is greater than the start frame and the frames are inside user memory.\n");
+	dbg(DBG_PRINT, "(GRADING3A 3.e) end frame is greater than the start frame and the frames are inside user memory.\n");
 	vmarea_t *vma;
 	uint32_t hi = startvfn+npages-1;
 	uint32_t lo = startvfn;
