@@ -55,7 +55,7 @@ handle_pagefault(uintptr_t vaddr, uint32_t cause)
         /* find the vmarea */
 	vmarea_t *vmarea;
 	if((vmarea=vmmap_lookup(curproc->p_vmmap,ADDR_TO_PN(vaddr)))==NULL){
-		proc_kill(curproc,-EFAULT);
+		proc_kill(curproc,EFAULT);
 		return;
 	}
 
@@ -63,7 +63,7 @@ handle_pagefault(uintptr_t vaddr, uint32_t cause)
 	if(!(cause&FAULT_PRESENT)){
 		if(((cause&FAULT_WRITE)&&!(vmarea->vma_prot&PROT_WRITE)) || ((cause&FAULT_RESERVED)&&!(vmarea->vma_prot&PROT_NONE))
 		 || ((cause&FAULT_EXEC)&&!(vmarea->vma_prot&PROT_EXEC))){
-			proc_kill(curproc,-EFAULT);
+			proc_kill(curproc,EFAULT);
 			return;
 		}	
 	}
