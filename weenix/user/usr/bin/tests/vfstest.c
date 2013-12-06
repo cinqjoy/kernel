@@ -899,7 +899,7 @@ int main(int argc, char **argv)
 #else
 int vfstest_main(int argc, char **argv)
 #endif
-{
+{       
         if (argc != 1) {
                 fprintf(stderr, "USAGE: vfstest\n");
                 return 1;

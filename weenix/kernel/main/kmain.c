@@ -350,13 +350,13 @@ initproc_run(int arg1, void *arg2)
 		char *argv[] = {"uname","-a",NULL};
 		char *envp[] = {NULL};
 
-/*		kernel_execve("/usr/bin/mmt",argv,envp);
-		kernel_execve("/usr/bin/hello",argv,envp);
+		kernel_execve("/usr/bin/eatmem",argv,envp);
+/*		kernel_execve("/usr/bin/hello",argv,envp);
 		kernel_execve("/usr/bin/args",argv,envp);
 		kernel_execve("/bin/uname",argv,envp);
-*/		kernel_execve("/sbin/init",argv,envp);
-		/*kernel_execve("/usr/bin/kshell",argv,envp);
-		kernel_execve("/usr/bin/fork-and-wait",argv,envp);
+		kernel_execve("/sbin/init",argv,envp);
+		kernel_execve("/usr/bin/forkbomb",argv,envp);
+		/*kernel_execve("/usr/bin/fork-and-wait",argv,envp);
 		kernel_execve("/usr/bin/stress",argv,envp);*/
 
 /*

@@ -315,7 +315,7 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 			 else
 			 { 
 			  		new_vmarea->vma_obj = tmp_obj;
-					tmp_obj->mmo_ops->ref(tmp_obj);
+					if(file!=NULL) tmp_obj->mmo_ops->ref(tmp_obj);
 			 }
 	
 			/*list_init(&(*new)->vma_olink);
@@ -381,8 +381,8 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 	uint32_t tmp;
 	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
 		if(lo > hi) return 0;
-		if((lo <= vma->vma_start) &&
-				(hi < vma->vma_end)){
+		if((lo <= vma->vma_start) && ( vma->vma_start <= hi)
+				&& (hi < vma->vma_end)){
 			/*case 3*/
 			vma->vma_off += hi-vma->vma_start+1;
 			vma->vma_start = hi+1;
@@ -409,8 +409,8 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 			vmmap_insert(map,newvma);
 			return 0;
 
-		}else if((lo > vma->vma_start) &&
-				(hi >= vma->vma_end)){
+		}else if((vma->vma_start < lo) && (lo <= vma->vma_end)
+				&& (vma->vma_end <= hi)){
 			/*case 2*/
 			tmp = vma->vma_end;
 			vma->vma_end = lo-1;
