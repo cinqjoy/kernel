@@ -119,6 +119,7 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 		return vmp_ret;
 	*ret = PN_TO_ADDR(vma->vma_start);
 	tlb_flush_range((uintptr_t)*ret, npages);
+	/*tlb_flush_all();*/
 	return 0;
 }
 

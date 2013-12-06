@@ -139,7 +139,7 @@ sys_getdents(getdents_args_t *arg)
 	dirent_t dir;
 	while(offset<karg.count){
 		if((ret=do_getdent(karg.fd, &dir))<0){
-			curthr->kt_errno=-err;
+			curthr->kt_errno=-ret;
 			return -1;
 		}
 		offset+=ret;
