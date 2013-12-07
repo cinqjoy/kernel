@@ -154,11 +154,12 @@ static int
 anon_fillpage(mmobj_t *o, pframe_t *pf)
 {
         /*NOT_YET_IMPLEMENTED("VM: anon_fillpage");*/
-	pframe_pin(pf);
 	KASSERT(pframe_is_busy(pf));
 	dbg(DBG_PRINT, "(GRADING3A 4.d) pframe is not busy\n ");
 	KASSERT(!pframe_is_pinned(pf));
 	dbg(DBG_PRINT, "(GRADING3A 4.d) pframe is not pinned\n ");
+	
+	pframe_pin(pf);
 	memset(pf->pf_addr,0,PAGE_SIZE);
 	pframe_unpin(pf);
 	/*pframe_t *myFrame=NULL;
