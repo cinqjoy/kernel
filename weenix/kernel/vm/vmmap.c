@@ -175,7 +175,7 @@ vmmap_lookup(vmmap_t *map, uint32_t vfn)
 	dbg(DBG_PRINT, "(GRADING3A 3.d) map is not null.\n");
 	vmarea_t * vma;
 	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
-		if(vma->vma_start <= vfn && vfn <= vma->vma_end)
+		if(vma->vma_start <= vfn && vfn < vma->vma_end)
 			return vma;
 	}list_iterate_end();
 	return NULL;
