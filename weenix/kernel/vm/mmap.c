@@ -91,7 +91,7 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	 * EINVAL We don't like addr, length, or offset (e.g., they are too
 	 *        large, or not aligned on a page boundary).
 	 */
-	if(!PAGE_ALIGNED(off) ||
+	if(!PAGE_ALIGNED(off) || !PAGE_ALIGNED(addr) ||
 			len > (USER_MEM_HIGH-USER_MEM_LOW) || len <= 0 ||
 			addr >= (void*)USER_MEM_HIGH || (addr < (void*)USER_MEM_LOW && addr!=(void*)0)) return -EINVAL;
 
@@ -110,6 +110,8 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	 *        mappings would have been exceeded.
 	 * This error should be returned by vmmap
 	 */
+
+
 	uint32_t npages = len/PAGE_SIZE + ((uint32_t)(len%PAGE_SIZE == 0)?0:1);
 	uint32_t lopage = ADDR_TO_PN(addr);
 	vmarea_t *vma;
@@ -151,7 +153,7 @@ do_munmap(void *addr, size_t len)
 	if(vmp_ret < 0) return vmp_ret;
 	KASSERT(NULL != curproc->p_pagedir);
 	dbg(DBG_PRINT, "(GRADING3A 2.b) the page directory of current process is no NULL.\n");
-	pt_unmap_range(curproc->p_pagedir, PN_TO_ADDR(lopage), PN_TO_ADDR(lopage)+npages*PAGE_SIZE);
+	pt_unmap_range(curproc->p_pagedir, (uintptr_t)PN_TO_ADDR(lopage), (uintptr_t)(PN_TO_ADDR(lopage+npages)));
 	tlb_flush_range((uintptr_t)addr,npages);
 	return 0;
 

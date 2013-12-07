@@ -61,8 +61,13 @@ handle_pagefault(uintptr_t vaddr, uint32_t cause)
 
 	/* check the permissions on the area */	
 	if(!(cause&FAULT_PRESENT)){
+		if( ((cause&FAULT_WRITE)!=FAULT_WRITE)&&!(vmarea->vma_prot&PROT_READ)){
+			proc_kill(curproc,EFAULT);
+			return;
+		}
+
 		if(((cause&FAULT_WRITE)&&!(vmarea->vma_prot&PROT_WRITE)) || ((cause&FAULT_RESERVED)&&!(vmarea->vma_prot&PROT_NONE))
-		 || ((cause&FAULT_EXEC)&&!(vmarea->vma_prot&PROT_EXEC))){
+		 || ((cause&FAULT_EXEC)&&!(vmarea->vma_prot&PROT_EXEC)) ){
 			proc_kill(curproc,EFAULT);
 			return;
 		}	
