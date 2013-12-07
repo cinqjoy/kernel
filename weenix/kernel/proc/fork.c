@@ -53,13 +53,18 @@ int
 do_fork(struct regs *regs)
 {
     	KASSERT(regs != NULL);
-    	KASSERT(curproc != NULL);
+    	dbg(DBG_PRINT, "(GRADING3A 7.a) the regs is not null\n ");
+	KASSERT(curproc != NULL);
+	dbg(DBG_PRINT, "(GRADING3A 7.a) current process is not null\n ");
     	KASSERT(curproc->p_state == PROC_RUNNING);
+	dbg(DBG_PRINT, "(GRADING3A 7.a) the state of current process is runnung\n ");
 
     	int i;
 	/*int (*fp3)(struct regs*) = userland_entry;*/
         proc_t *child_proc=proc_create("child_process");
-	if(child_proc->p_vmmap!=NULL) vmmap_destroy(child_proc->p_vmmap);
+        KASSERT(child_proc->p_pagedir != NULL);
+	dbg(DBG_PRINT, "(GRADING3A 7.a) the page directory of child process is not null\n ");
+	if(!child_proc->p_vmmap) vmmap_destroy(child_proc->p_vmmap);
         child_proc->p_vmmap=vmmap_clone(curproc->p_vmmap);
 
         list_link_t *p_link,*c_link;
@@ -103,8 +108,9 @@ do_fork(struct regs *regs)
 	list_insert_tail(&curproc->p_children,&child_proc->p_child_link);*/
         
 		
-		kthread_t *child_thread=kthread_clone(curthr);
+	kthread_t *child_thread=kthread_clone(curthr);
         KASSERT(child_thread->kt_kstack != NULL);
+	dbg(DBG_PRINT, "(GRADING3A 7.a) the stack of the thread of child process is not null \n ");
 
         child_thread->kt_ctx.c_pdptr= child_proc->p_pagedir;
         child_thread->kt_ctx.c_kstacksz=curthr->kt_ctx.c_kstacksz;
@@ -122,10 +128,10 @@ do_fork(struct regs *regs)
 	child_proc->p_start_brk=curproc->p_start_brk;
         child_proc->p_status=curproc->p_status;
         child_proc->p_state=curproc->p_state;
-		KASSERT(child_proc->p_state == PROC_RUNNING);
+	KASSERT(child_proc->p_state == PROC_RUNNING);
+	dbg(DBG_PRINT, "(GRADING3A 7.a) the child process's state is running \n ");
         child_proc->p_cwd=curproc->p_cwd;/* set the child's working directory*/
         vref(curproc->p_cwd);
-        KASSERT(child_proc->p_pagedir != NULL);
 
         sched_make_runnable(child_thread);
 

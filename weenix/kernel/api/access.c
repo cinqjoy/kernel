@@ -134,7 +134,7 @@ int addr_perm(struct proc *p, const void *vaddr, int perm)
 */
 	vmarea_t *myVmarea;
 	list_iterate_begin(&p->p_vmmap->vmm_list,myVmarea,vmarea_t,vma_plink){
-		if(PN_TO_ADDR(myVmarea->vma_start)<= vaddr && PN_TO_ADDR(myVmarea->vma_end)>= vaddr){
+		if(PN_TO_ADDR(myVmarea->vma_start)<= vaddr && PN_TO_ADDR(myVmarea->vma_end)> vaddr){
 			if((myVmarea->vma_prot&perm)==perm){
 				return 1;
 			}else{

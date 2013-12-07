@@ -52,8 +52,10 @@ static mmobj_ops_t shadow_mmobj_ops = {
 void
 shadow_init()
 {
+	
 	shadow_allocator=slab_allocator_create("shadowobj", sizeof(mmobj_t));
 	KASSERT(shadow_allocator);
+	dbg(DBG_PRINT, "(GRADING3A 6.a) shadow_allocator is successfully created.\n");
 }
 
 /*
@@ -82,6 +84,7 @@ static void
 shadow_ref(mmobj_t *o)
 {
 		KASSERT(o && (0 < o->mmo_refcount) && (&shadow_mmobj_ops == o->mmo_ops));
+		dbg(DBG_PRINT, "(GRADING3A 6.b) object o is not NULL and o's reference count is greater than 0 and its ops is shadow obj ops.\n");
 		o->mmo_refcount++;
 }
 
@@ -97,6 +100,7 @@ static void
 shadow_put(mmobj_t *o)
 {
 		KASSERT(o && (0 < o->mmo_refcount) && (&shadow_mmobj_ops == o->mmo_ops));		
+		dbg(DBG_PRINT, "(GRADING3A 6.c) object o is not NULL and o's reference count is greater than 0 and its ops is shaow obj ops.\n");
 		if((o->mmo_refcount-1)==o->mmo_nrespages){
 			pframe_t *pf;
 			list_iterate_begin(&o->mmo_respages,pf,pframe_t,pf_olink){
@@ -159,7 +163,9 @@ static int
 shadow_fillpage(mmobj_t *o, pframe_t *pf)
 {
 		KASSERT(pframe_is_busy(pf));
-	    KASSERT(!pframe_is_pinned(pf));
+	        dbg(DBG_PRINT, "(GRADING3A 6.d) pframe is not busy\n ");
+        	KASSERT(!pframe_is_pinned(pf));
+	        dbg(DBG_PRINT, "(GRADING3A 6.d) pframe is not pinned\n ");
 		pframe_t *tmp_pf;
 		pframe_pin(pf);
 		if(o->mmo_shadowed->mmo_ops->lookuppage(o->mmo_shadowed,pf->pf_pagenum,0,&tmp_pf)==0){

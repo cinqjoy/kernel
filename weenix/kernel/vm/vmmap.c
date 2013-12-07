@@ -77,6 +77,8 @@ vmmap_create(void)
 void
 vmmap_destroy(vmmap_t *map)
 {
+	KASSERT(NULL != map);
+	dbg(DBG_PRINT, "(GRADING3A 3.a) map is not null.\n");
 	vmarea_t * vma;
 	while(!list_empty(&map->vmm_list)){
 		vma = list_head(&map->vmm_list,vmarea_t,vma_plink);
@@ -94,6 +96,14 @@ vmmap_insert(vmmap_t *map, vmarea_t *newvma)
 {
 	/* assert vmarea is valid */
 	/* newvma->vma_obj cannot be NULL */
+	KASSERT(NULL != map && NULL != newvma);
+	dbg(DBG_PRINT, "(GRADING3A 3.b) Both of map and newvma are not NULL.\n");
+	KASSERT(NULL == newvma->vma_vmmap);
+	dbg(DBG_PRINT, "(GRADING3A 3.b) newvma->vma_vmmap is NULL.\n");
+	KASSERT(newvma->vma_start < newvma->vma_end);
+	dbg(DBG_PRINT, "(GRADING3A 3.b) The end addr of vma is greater than the start addr of vma.\n");
+	KASSERT(ADDR_TO_PN(USER_MEM_LOW) <= newvma->vma_start && ADDR_TO_PN(USER_MEM_HIGH) >= newvma->vma_end);
+	dbg(DBG_PRINT, "(GRADING3A 3.b) The range of the newvma is inside the range of user memmory.\n");
 
 	vmarea_t * vma;
 	newvma->vma_vmmap = map;
@@ -119,30 +129,34 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 {
 	vmarea_t *vma;
 	/* the maximum entry of the pagetable, page number */
-	uint32_t hi = ADDR_TO_PN(USER_MEM_HIGH)-1;
+	KASSERT(NULL != map);
+	dbg(DBG_PRINT, "(GRADING3A 3.c) map is not null.\n");
+	KASSERT(0 < npages);
+	dbg(DBG_PRINT, "(GRADING3A 3.c) number of pages is greater than 0.\n");
+	uint32_t hi = ADDR_TO_PN(USER_MEM_HIGH);
 	uint32_t lo = ADDR_TO_PN(USER_MEM_LOW);
 
 	switch(dir){
 		case VMMAP_DIR_HILO:
 			list_iterate_reverse(&map->vmm_list,vma,vmarea_t,vma_plink){
-				lo = vma->vma_end+1;
-				if((hi-lo+1) >= npages)
+				lo = vma->vma_end;
+				if((hi-lo) >= npages)
 					return lo;
-				hi = vma->vma_start-1;
+				hi = vma->vma_start;
 			}list_iterate_end();
 			lo = ADDR_TO_PN(USER_MEM_LOW);
-			if((hi-lo+1) >= npages)
+			if((hi-lo) >= npages)
 				return lo;
 			break;
 		case VMMAP_DIR_LOHI:
 			list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
-				hi = vma->vma_start-1;
-				if((hi-lo+1) >= npages)
+				hi = vma->vma_start;
+				if((hi-lo) >= npages)
 					return lo;
-				lo = vma->vma_end+1;
+				lo = vma->vma_end;
 			}list_iterate_end();
 			hi = ADDR_TO_PN(USER_MEM_HIGH);
-			if((hi-lo+1) >= npages)
+			if((hi-lo) >= npages)
 				return lo;
 			break;
 		default:
@@ -157,6 +171,8 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 vmarea_t *
 vmmap_lookup(vmmap_t *map, uint32_t vfn)
 {
+	KASSERT(NULL != map);
+	dbg(DBG_PRINT, "(GRADING3A 3.d) map is not null.\n");
 	vmarea_t * vma;
 	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
 		if(vma->vma_start <= vfn && vfn <= vma->vma_end)
@@ -229,7 +245,21 @@ int
 vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
           int prot, int flags, off_t off, int dir, vmarea_t **new)
 {
-
+			KASSERT(NULL != map);
+			dbg(DBG_PRINT, "(GRADING3A 3.f) map is not null.\n");
+			KASSERT(0 < npages);
+			dbg(DBG_PRINT, "(GRADING3A 3.f) number of pages is greater than 0.\n");
+			KASSERT(!(~(PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC) & prot));
+			dbg(DBG_PRINT, "(GRADING3A 3.f) prot belongs to one of four status.\n");
+			KASSERT((MAP_SHARED & flags) || (MAP_PRIVATE & flags));
+			dbg(DBG_PRINT, "(GRADING3A 3.f) the status of flags is shared or private.\n");	
+			KASSERT((0 == lopage) || (ADDR_TO_PN(USER_MEM_LOW) <= lopage));
+			dbg(DBG_PRINT, "(GRADING3A 3.f) lower bound page equals to 0 or it's greater than the lower bound of user memory\n");
+			KASSERT((0 == lopage) || (ADDR_TO_PN(USER_MEM_HIGH) >= (lopage + npages)));
+			dbg(DBG_PRINT, "(GRADING3A 3.f) lower bound page equals to 0 or the pages allocated is not greater than the upper bound of user memory.\n");	
+			KASSERT(PAGE_ALIGNED(off));
+			dbg(DBG_PRINT, "(GRADING3A 3.f) the offset is page aligned.\n");	
+			
 			int vfn;
 			mmobj_t * tmp_obj = NULL;
 			mmobj_t * shadow_obj = NULL;
@@ -256,7 +286,7 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 			/* assgin content to vmarea */
 			new_vmarea = vmarea_alloc();
 			new_vmarea->vma_start = vfn;
-			new_vmarea->vma_end = vfn+npages-1;
+			new_vmarea->vma_end = vfn+npages;
 			new_vmarea->vma_prot = prot;
 			new_vmarea->vma_flags = flags;
 			new_vmarea->vma_off = off;
@@ -347,31 +377,31 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 {
 	vmarea_t *vma;
 	uint32_t lo = lopage;
-	uint32_t hi = lopage+npages-1;
+	uint32_t hi = lopage+npages;
 	uint32_t tmp;
 	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
 		if(lo > hi) return 0;
-		if((lo <= vma->vma_start) && ( vma->vma_start <= hi)
+		if((lo <= vma->vma_start) && ( vma->vma_start < hi)
 				&& (hi < vma->vma_end)){
 			/*case 3*/
-			vma->vma_off += hi-vma->vma_start+1;
-			vma->vma_start = hi+1;
+			vma->vma_off += hi-vma->vma_start;
+			vma->vma_start = hi;
 			return 0;
 
 		}else if((lo <= vma->vma_start) &&
 				(hi >= vma->vma_end)){
 			/*case 4*/
-			lo = vma->vma_end+1;
+			lo = vma->vma_end;
 			vmarea_free(vma);
 
 		}else if((lo > vma->vma_start) &&
 				(hi < vma->vma_end)){
 			/*case 1(split)*/
 			vmarea_t * newvma = vmarea_alloc();
-			newvma->vma_off = vma->vma_off + (hi-vma->vma_start+1);
-			newvma->vma_start = hi+1;
+			newvma->vma_off = vma->vma_off + (hi-vma->vma_start);
+			newvma->vma_start = hi;
 			newvma->vma_end = vma->vma_end;
-			vma->vma_end = lo-1;
+			vma->vma_end = lo;
 
 			vma->vma_obj->mmo_ops->ref(vma->vma_obj);
 			newvma->vma_obj = vma->vma_obj;
@@ -379,12 +409,12 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 			vmmap_insert(map,newvma);
 			return 0;
 
-		}else if((vma->vma_start < lo) && (lo <= vma->vma_end)
+		}else if((vma->vma_start < lo) && (lo < vma->vma_end)
 				&& (vma->vma_end <= hi)){
 			/*case 2*/
 			tmp = vma->vma_end;
-			vma->vma_end = lo-1;
-			lo = tmp+1;
+			vma->vma_end = lo;
+			lo = tmp;
 
 		}else{
 			/*no match*/
@@ -406,15 +436,17 @@ vmmap_is_range_empty(vmmap_t *map, uint32_t startvfn, uint32_t npages)
 	 */
 
 	/* assert npages != 0 */
-
+	uint32_t endvfn = startvfn+npages;
+	KASSERT((startvfn < endvfn) && (ADDR_TO_PN(USER_MEM_LOW) <= startvfn) && (ADDR_TO_PN(USER_MEM_HIGH) >= endvfn));
+	dbg(DBG_PRINT, "(GRADING3A 3.e) end frame is greater than the start frame and the frames are inside user memory.\n");
 	vmarea_t *vma;
-	uint32_t hi = startvfn+npages-1;
+	uint32_t hi = startvfn+npages;
 	uint32_t lo = startvfn;
 
 	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
-		if(((vma->vma_start <= lo) && (lo <= vma->vma_end)) ||   /* lo is inside a vmarea */
-				((vma->vma_start <= hi) && (hi <= vma->vma_end)) || /* hi is inside a vmarea */
-				((lo < vma->vma_start) && (vma->vma_end < hi))){ /* vmarea is in side the range we specified */
+		if(((vma->vma_start <= lo) && (lo < vma->vma_end)) ||   /* lo is inside a vmarea */
+				((vma->vma_start < hi) && (hi <= vma->vma_end)) || /* hi is inside a vmarea */
+				((lo <= vma->vma_start) && (vma->vma_end <= hi))){ /* vmarea is in side the range we specified */
 			return 0;
 		}
 	}list_iterate_end();
@@ -445,7 +477,7 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 		list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
 			
 			uintptr_t vfs= ADDR_TO_PN(((uintptr_t)vma_saddr));
-			if((vma->vma_start <= vfs) && (vfs <= vma->vma_end)  && (remainsize!=0) )
+			if((vma->vma_start <= vfs) && (vfs < vma->vma_end)  && (remainsize!=0) )
 			{
 				size_t size;
 				/*uint32_t v_pdindex;
@@ -460,7 +492,7 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 				poffset =  (((uint32_t)(vma_saddr)) & 0x00000FFF);
 
 				
-				if (remainsize <=PAGE_SIZE *(vma->vma_end - vma->vma_start + 1) )/* located in one VMarea */
+				if (remainsize <=PAGE_SIZE *(vma->vma_end - vma->vma_start) )/* located in one VMarea */
 				{
 					size = remainsize;
 					remainsize -= size;
@@ -468,8 +500,8 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 				}
 				else /* need to find another VMarea , preparing next vma_saddr which starting from current VMarea puls one*/
 				{
-					size = PAGE_SIZE *(vma->vma_end - vma->vma_start + 1);
-					vfs = vma->vma_end + 1;
+					size = PAGE_SIZE *(vma->vma_end - vma->vma_start);
+					vfs = vma->vma_end;
 					vma_saddr = (uintptr_t) PN_TO_ADDR(vfs);
 					remainsize -= size;
 				}
@@ -538,7 +570,7 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 	list_iterate_begin(&map->vmm_list,vma,vmarea_t,vma_plink){
 		
 		uintptr_t vfs= ADDR_TO_PN(((uintptr_t)vma_saddr));
-		if((vma->vma_start <= vfs) && (vfs <= vma->vma_end)  && (remainsize!=0) )
+		if((vma->vma_start <= vfs) && (vfs < vma->vma_end)  && (remainsize!=0) )
 		{
 			size_t size;
 			/*uint32_t v_pdindex;
@@ -553,7 +585,7 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 			poffset =  (((uint32_t)(vma_saddr)) & 0x00000FFF);
 	
 			
-			if (remainsize <=PAGE_SIZE *(vma->vma_end - vma->vma_start + 1) )/* located in one VMarea */
+			if (remainsize <=PAGE_SIZE *(vma->vma_end - vma->vma_start) )/* located in one VMarea */
 			{
 				size = remainsize;
 				remainsize -= size;
@@ -561,8 +593,8 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 			}
 			else /* need to find another VMarea , preparing next vma_saddr which starting from current VMarea puls one*/
 			{
-				size = PAGE_SIZE *(vma->vma_end - vma->vma_start + 1);
-				vfs = vma->vma_end + 1;
+				size = PAGE_SIZE *(vma->vma_end - vma->vma_start);
+				vfs = vma->vma_end;
 				vma_saddr = (uintptr_t) PN_TO_ADDR(vfs);
 				remainsize -= size;
 			}
