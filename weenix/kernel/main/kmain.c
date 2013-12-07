@@ -347,7 +347,7 @@ initproc_run(int arg1, void *arg2)
 		KASSERT(fd==2);
 
 
-		char *argv[] = {"uname","-a",NULL};
+		char *argv[] = {NULL};
 		char *envp[] = {NULL};
 
 		kernel_execve("/usr/bin/eatmem",argv,envp);
@@ -356,7 +356,7 @@ initproc_run(int arg1, void *arg2)
 		kernel_execve("/bin/uname",argv,envp);
 		kernel_execve("/sbin/init",argv,envp);
 		kernel_execve("/usr/bin/forkbomb",argv,envp);
-		/*kernel_execve("/usr/bin/fork-and-wait",argv,envp);
+		kernel_execve("/usr/bin/fork-and-wait",argv,envp);
 		kernel_execve("/usr/bin/stress",argv,envp);*/
 
 /*

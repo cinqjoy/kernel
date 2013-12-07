@@ -147,7 +147,9 @@ static int
 anon_fillpage(mmobj_t *o, pframe_t *pf)
 {
         /*NOT_YET_IMPLEMENTED("VM: anon_fillpage");*/
+	pframe_pin(pf);
 	memset(pf->pf_addr,0,PAGE_SIZE);
+	pframe_unpin(pf);
 	/*pframe_t *myFrame=NULL;
 	list_iterate_begin(&o->mmo_respages, myFrame, pframe_t,pf_olink){
 		if(myFrame->pf_obj==o&& myFrame->pf_pagenum==pf->pf_pagenum){

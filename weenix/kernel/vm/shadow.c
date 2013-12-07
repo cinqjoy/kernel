@@ -161,8 +161,10 @@ shadow_fillpage(mmobj_t *o, pframe_t *pf)
 		KASSERT(pframe_is_busy(pf));
 	    KASSERT(!pframe_is_pinned(pf));
 		pframe_t *tmp_pf;
+		pframe_pin(pf);
 		if(o->mmo_shadowed->mmo_ops->lookuppage(o->mmo_shadowed,pf->pf_pagenum,0,&tmp_pf)==0){
 			memcpy(pf->pf_addr,tmp_pf->pf_addr,PAGE_SIZE);
+			pframe_unpin(pf);
 			return 0;
 		}else return -1; /* Should not be here */
 }

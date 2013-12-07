@@ -5,7 +5,6 @@ break bootstrap
 
 
 add-symbol-file user/usr/bin/eatmem.exec 0x08048094
-add-symbol-file user/usr/bin/vfstest.exec 0x08048094
 
 b main
 
