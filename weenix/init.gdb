@@ -4,7 +4,7 @@ break hard_shutdown
 break bootstrap
 
 
-add-symbol-file user/sbin/init.exec 0x08048094
+add-symbol-file user/usr/bin/stress.exec 0x08048094
 
 b main
 

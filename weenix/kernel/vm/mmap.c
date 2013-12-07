@@ -18,6 +18,7 @@
 
 #include "vm/vmmap.h"
 #include "vm/mmap.h"
+#include "mm/pagetable.h"
 
 /*
  * This function implements the mmap(2) syscall, but only
@@ -113,12 +114,15 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	uint32_t lopage = ADDR_TO_PN(addr);
 	vmarea_t *vma;
 	int vmp_ret;
-	KASSERT(NULL != curproc->p_pagedir);
-	dbg(DBG_PRINT, "(GRADING3A 2.a) the page directory of current process is no NULL.\n");
+
 	vmp_ret = vmmap_map(curproc->p_vmmap, vn, lopage, npages, prot, flags, off, VMMAP_DIR_LOHI, &vma);
 	if(vmp_ret < 0)
 		return vmp_ret;
 	*ret = PN_TO_ADDR(vma->vma_start);
+	KASSERT(NULL != curproc->p_pagedir);
+	dbg(DBG_PRINT, "(GRADING3A 2.a) the page directory of current process is no NULL.\n");
+	if(npages!=0) pt_unmap_range(curproc->p_pagedir, (uintptr_t)*ret, (uintptr_t)*ret+npages*PAGE_SIZE);
+	else pt_unmap(curproc->p_pagedir,(uintptr_t)*ret);		
 	tlb_flush_range((uintptr_t)*ret, npages);
 	/*tlb_flush_all();*/
 	return 0;
@@ -144,15 +148,13 @@ do_munmap(void *addr, size_t len)
 	uint32_t npages = len/PAGE_SIZE + ((uint32_t)(len%PAGE_SIZE == 0))?0:1;
 	uint32_t lopage = ADDR_TO_PN(addr);
 
-	
-
-
-	tlb_flush_range((uintptr_t)addr,npages);
-	KASSERT(NULL != curproc->p_pagedir);
-	dbg(DBG_PRINT, "(GRADING3A 2.b) the page directory of current process is no NULL.\n");
-	
 	int vmp_ret = vmmap_remove(curproc->p_vmmap, lopage, npages);
 	if(vmp_ret < 0) return vmp_ret;
+	KASSERT(NULL != curproc->p_pagedir);
+	dbg(DBG_PRINT, "(GRADING3A 2.b) the page directory of current process is no NULL.\n");
+	if(npages!=0) pt_unmap_range(curproc->p_pagedir, PN_TO_ADDR(lopage), PN_TO_ADDR(lopage)+npages*PAGE_SIZE);
+	else pt_unmap(curproc->p_pagedir,(uintptr_t)PN_TO_ADDR(lopage));
+	tlb_flush_range((uintptr_t)addr,npages);
 	return 0;
 
 }
