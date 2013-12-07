@@ -59,29 +59,29 @@ do_brk(void *addr, void **ret)
 	/*NOT_YET_IMPLEMENTED("VM: do_brk");*/
 	/*curproc->p_brk, curproc->p_start_brk*/
 
-	uint32_t cur = ADDR_TO_PN(curproc->p_brk);
-	uint32_t in = ADDR_TO_PN(addr);
-	uint32_t start = ADDR_TO_PN(curproc->p_start_brk);
+	uint32_t cur_brkn = ADDR_TO_PN(curproc->p_brk);
+	uint32_t in_brkn = ADDR_TO_PN(addr);
+	uint32_t start_brkn = ADDR_TO_PN(curproc->p_start_brk);
 
 	vmarea_t *myFrame;
 	if(addr==NULL){
 		*ret = curproc->p_brk;	
 	}else{
 
-		KASSERT(in >= start);
+		KASSERT(in_brkn >= start_brkn);
 		if((uint32_t)addr>USER_MEM_HIGH)
 			return -ENOMEM;
 		/*KASSERT((ADDR_TO_PN(addr)-ADDR_TO_PN(curproc->p_brk)) <= 1);*/
-		if(cur >= in){
+		if(cur_brkn >= in_brkn){
 			curproc->p_brk = addr;
 			*ret = addr;
 			return 0;
 		}else{
-			if(vmmap_is_range_empty(curproc->p_vmmap,cur+1,in)){
-				myFrame=vmmap_lookup(curproc->p_vmmap,cur);
+			if(vmmap_is_range_empty(curproc->p_vmmap,cur_brkn+1,in_brkn-cur_brkn)){
+				myFrame=vmmap_lookup(curproc->p_vmmap,cur_brkn);
 				KASSERT(myFrame != NULL);
 				if(myFrame!=NULL){
-					myFrame->vma_end += in-cur;
+					myFrame->vma_end += in_brkn-cur_brkn;
 					curproc->p_brk = addr;
 					*ret = addr;
 				}

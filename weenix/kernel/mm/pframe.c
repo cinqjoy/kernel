@@ -384,6 +384,10 @@ pframe_migrate(pframe_t *pf, mmobj_t *dest)
 void
 pframe_pin(pframe_t *pf)
 {
+	KASSERT(!pframe_is_free(pf));
+	dbg(DBG_PRINT, "(GRADING3A 1.a) pframe pf is not free.\n");
+	KASSERT(pf->pf_pincount >= 0);
+	dbg(DBG_PRINT, "(GRADING3A 1.a) pin count on pframe pf is greater than 0.\n");
 	if(!pframe_is_pinned(pf)){
 		list_remove(&pf->pf_link);
 		nallocated--;
@@ -408,6 +412,11 @@ pframe_pin(pframe_t *pf)
 void
 pframe_unpin(pframe_t *pf)
 {
+	KASSERT(!pframe_is_free(pf));
+	dbg(DBG_PRINT, "(GRADING3A 1.b) pframe pf is not free.\n");
+	KASSERT(pf->pf_pincount >= 0);
+	dbg(DBG_PRINT, "(GRADING3A 1.b) pin count on pframe pf is greater than 0.\n");
+	
 	pf->pf_pincount--;
 	if(!pframe_is_pinned(pf)){
 		list_remove(&pf->pf_link);

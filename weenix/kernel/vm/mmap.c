@@ -113,7 +113,8 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	uint32_t lopage = ADDR_TO_PN(addr);
 	vmarea_t *vma;
 	int vmp_ret;
-
+	KASSERT(NULL != curproc->p_pagedir);
+	dbg(DBG_PRINT, "(GRADING3A 2.a) the page directory of current process is no NULL.\n");
 	vmp_ret = vmmap_map(curproc->p_vmmap, vn, lopage, npages, prot, flags, off, VMMAP_DIR_LOHI, &vma);
 	if(vmp_ret < 0)
 		return vmp_ret;
@@ -147,6 +148,9 @@ do_munmap(void *addr, size_t len)
 
 
 	tlb_flush_range((uintptr_t)addr,npages);
+	KASSERT(NULL != curproc->p_pagedir);
+	dbg(DBG_PRINT, "(GRADING3A 2.b) the page directory of current process is no NULL.\n");
+	
 	int vmp_ret = vmmap_remove(curproc->p_vmmap, lopage, npages);
 	if(vmp_ret < 0) return vmp_ret;
 	return 0;

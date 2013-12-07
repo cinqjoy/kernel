@@ -42,6 +42,9 @@ anon_init()
         /*NOT_YET_IMPLEMENTED("VM: anon_init");*/
 	anon_allocator = slab_allocator_create("anonobj", sizeof(mmobj_t));
 	KASSERT(NULL != anon_allocator && "failed to create anonobj allocator!");
+	dbg(DBG_PRINT, "(GRADING3A 4.a) anon_allocator is successfully created.\n");
+	KASSERT(anon_allocator);
+	dbg(DBG_PRINT, "(GRADING3A 4.a) anon_allocator is successfully created.\n");
 }
 
 /*
@@ -70,7 +73,9 @@ static void
 anon_ref(mmobj_t *o)
 {
         /*NOT_YET_IMPLEMENTED("VM: anon_ref");*/
-	/* add KAASSERT to check whether the mmobj is anonymous*/
+	/* add KAASSERT to check whether the mmobj is anonymousi*/
+	KASSERT(o && (0 < o->mmo_refcount) && (&anon_mmobj_ops == o->mmo_ops));
+	dbg(DBG_PRINT, "(GRADING3A 4.b) object o is not NULL and o's reference count is greater than 0 and its ops is anon obj ops.\n");
 	o->mmo_refcount++;
 }
 
@@ -87,6 +92,8 @@ anon_put(mmobj_t *o)
 {
         /*NOT_YET_IMPLEMENTED("VM: anon_put");*/
 	/* add KAASSERT to check whether the mmobj is anonymous and whether the refcount is ess the number of resident pages*/
+	KASSERT(o && (0 < o->mmo_refcount) && (&anon_mmobj_ops == o->mmo_ops));
+	dbg(DBG_PRINT, "(GRADING3A 4.c) object o is not NULL and o's reference count is greater than 0 and its ops is anon obj ops.\n");
 	pframe_t *myFrame;
 	
 	if(o->mmo_refcount-1==o->mmo_nrespages){
@@ -147,7 +154,13 @@ static int
 anon_fillpage(mmobj_t *o, pframe_t *pf)
 {
         /*NOT_YET_IMPLEMENTED("VM: anon_fillpage");*/
+	pframe_pin(pf);
+	KASSERT(pframe_is_busy(pf));
+	dbg(DBG_PRINT, "(GRADING3A 4.d) pframe is not busy\n ");
+	KASSERT(!pframe_is_pinned(pf));
+	dbg(DBG_PRINT, "(GRADING3A 4.d) pframe is not pinned\n ");
 	memset(pf->pf_addr,0,PAGE_SIZE);
+	pframe_unpin(pf);
 	/*pframe_t *myFrame=NULL;
 	list_iterate_begin(&o->mmo_respages, myFrame, pframe_t,pf_olink){
 		if(myFrame->pf_obj==o&& myFrame->pf_pagenum==pf->pf_pagenum){
