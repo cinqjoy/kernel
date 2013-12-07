@@ -121,8 +121,7 @@ do_mmap(void *addr, size_t len, int prot, int flags,
 	*ret = PN_TO_ADDR(vma->vma_start);
 	KASSERT(NULL != curproc->p_pagedir);
 	dbg(DBG_PRINT, "(GRADING3A 2.a) the page directory of current process is no NULL.\n");
-	if(npages!=0) pt_unmap_range(curproc->p_pagedir, (uintptr_t)*ret, (uintptr_t)*ret+npages*PAGE_SIZE);
-	else pt_unmap(curproc->p_pagedir,(uintptr_t)*ret);		
+	pt_unmap_range(curproc->p_pagedir, (uintptr_t)*ret, (uintptr_t)*ret+npages*PAGE_SIZE);
 	tlb_flush_range((uintptr_t)*ret, npages);
 	/*tlb_flush_all();*/
 	return 0;
@@ -145,15 +144,14 @@ do_munmap(void *addr, size_t len)
 	|| addr >= (void*)USER_MEM_HIGH || (addr < (void*)USER_MEM_LOW && addr!=(void*)0)) 
 		return -EINVAL;
 		
-	uint32_t npages = len/PAGE_SIZE + ((uint32_t)(len%PAGE_SIZE == 0))?0:1;
+	uint32_t npages = len/PAGE_SIZE + ((uint32_t)(len%PAGE_SIZE == 0)?0:1);
 	uint32_t lopage = ADDR_TO_PN(addr);
 
 	int vmp_ret = vmmap_remove(curproc->p_vmmap, lopage, npages);
 	if(vmp_ret < 0) return vmp_ret;
 	KASSERT(NULL != curproc->p_pagedir);
 	dbg(DBG_PRINT, "(GRADING3A 2.b) the page directory of current process is no NULL.\n");
-	if(npages!=0) pt_unmap_range(curproc->p_pagedir, PN_TO_ADDR(lopage), PN_TO_ADDR(lopage)+npages*PAGE_SIZE);
-	else pt_unmap(curproc->p_pagedir,(uintptr_t)PN_TO_ADDR(lopage));
+	pt_unmap_range(curproc->p_pagedir, PN_TO_ADDR(lopage), PN_TO_ADDR(lopage)+npages*PAGE_SIZE);
 	tlb_flush_range((uintptr_t)addr,npages);
 	return 0;
 
