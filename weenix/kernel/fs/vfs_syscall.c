@@ -577,6 +577,14 @@ do_link(const char *from, const char *to)
 		TEST_DBG("DO_LINK_OUT\n");
 			return ret;
 	}
+
+	if ( (fromv != NULL) && (S_ISDIR(fromv->vn_mode)) )
+	{
+		vput(fromv);
+		TEST_DBG("DO_LINK_OUT\n");
+		return -EISDIR;
+	}
+
 	/*assume old path must exists according to linux spec*/
 
 	/*vput(fromv);*/
