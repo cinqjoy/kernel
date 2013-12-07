@@ -255,6 +255,7 @@ kthread_clone(kthread_t *thr)
 			(void *) clone_thr->kt_kstack,
 			DEFAULT_STACK_SIZE,
 			clone_thr->kt_proc->p_pagedir);
+	clone_thr->kt_state = curthr->kt_state;
 	KASSERT(KT_RUN == clone_thr->kt_state);
 	dbg(DBG_PRINT, "(GRADING3A 8.a) the new thread state is run\n ");
 	return clone_thr;
